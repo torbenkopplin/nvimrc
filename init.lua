@@ -8,77 +8,83 @@ vim.opt.splitright = true
 vim.o.winborder = "rounded"
 vim.o.mouse = ""
 
-vim.g.mapleader = ' '
+vim.g.mapleader = " "
 
 local keymap = vim.keymap.set
 
-keymap('n', '<leader>w', ':w<CR>')
-keymap('n', '<leader>q', ':q<CR>')
-keymap('n', '<Esc>', '<cmd>nohlsearch<CR><Esc>')
-keymap({'n', 'v'}, '<Space>', '<Nop>', { silent = true })
-keymap('n', 'r', '<C-r>')
+keymap("n", "<leader>w", ":w<CR>")
+keymap("n", "<leader>q", ":q<CR>")
+keymap("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>")
+keymap({ "n", "v" }, "<Space>", "<Nop>", { silent = true })
+keymap("n", "r", "<C-r>")
 
-keymap('n', '<leader>e', function() vim.diagnostic.open_float() end)
+keymap("n", "<leader>e", function() vim.diagnostic.open_float() end)
+-- LSP diagnostics maps
+keymap("n", "<C-ä>", function() vim.diagnostic.jump({ count = 1 }) end)
+keymap("n", "<C-å>", function() vim.diagnostic.jump({ count = -1 }) end)
 
-keymap('n', '<leader>r', vim.lsp.buf.references)
-keymap('n', '<leader>d', vim.lsp.buf.definition)
-keymap('n', '<leader>s', vim.lsp.buf.rename)
+keymap("n", "<leader>r", vim.lsp.buf.references)
+keymap("n", "<leader>d", vim.lsp.buf.definition)
+keymap("n", "<leader>s", vim.lsp.buf.rename)
+keymap({ "n", "v" }, "<leader>i", vim.lsp.buf.format)
 
-keymap('n', '`', "'")
-keymap('n', "'", '`')
+keymap("n", "`", "'")
+keymap("n", "'", "`")
 
-keymap('n', 'j', 'gj')
-keymap('n', 'gj', 'j')
-keymap('n', 'k', 'gk')
-keymap('n', 'gk', 'k')
+keymap("n", "j", "gj")
+keymap("n", "gj", "j")
+keymap("n", "k", "gk")
+keymap("n", "gk", "k")
 
-keymap('n', '-', '/')
+keymap("n", "-", "/")
 
-local gh = function(url) return "https://github.com/" .. url end
+local gh = function(url)
+	return "https://github.com/" .. url
+end
 local plugs = {
-	{ src = gh("n1ghtmare/noirblaze-vim"), },
-	{ src = gh("thaerkh/vim-workspace"), },
-	{ src = gh("tpope/vim-fugitive"), },
+	{ src = gh("n1ghtmare/noirblaze-vim") },
+	{ src = gh("thaerkh/vim-workspace") },
+	{ src = gh("tpope/vim-fugitive") },
 	{ src = gh("junegunn/rainbow_parentheses.vim") },
-  { 
-		src = gh("ibhagwan/fzf-lua"), 
+	{
+		src = gh("ibhagwan/fzf-lua"),
 		req = "fzf-lua",
 		opts = {
 			winopts = {
-				height = 0.40,  -- bottom 40%
-				width  = 1.0,
-				row    = 1.0,   -- place at bottom
-				col    = 0.5,
+				height = 0.40, -- bottom 40%
+				width = 1.0,
+				row = 1.0, -- place at bottom
+				col = 0.5,
 				border = 1,
 			},
 			fzf_opts = {
 				["--layout"] = "reverse",
-				["--info"]   = "inline",
+				["--info"] = "inline",
 				["--history"] = vim.fn.stdpath("data") .. "/fzf-history",
 			},
 			preview = { default = "bat" },
-		}
+		},
 	},
 	{ src = gh("neovim/nvim-lspconfig") },
 	{ src = gh("nvim-tree/nvim-web-devicons") },
-	{ 
+	{
 		src = gh("nvim-treesitter/nvim-treesitter"),
 		req = "nvim-treesitter",
 		opts = {
 			ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json" },
-			highlight = { enable = true, },
-		}
+			highlight = { enable = true },
+		},
 	},
-	{ 
+	{
 		src = gh("nvim-treesitter/nvim-treesitter-textobjects"),
 		req = "nvim-treesitter-textobjects",
 	},
 	{ src = gh("mason-org/mason.nvim"), req = "mason" },
-	{ 
+	{
 		src = gh("mason-org/mason-lspconfig.nvim"),
 		req = "mason-lspconfig",
 		opts = {
-			ensure_installed = { 'vimls', 'ts_ls', 'lua_ls', 'eslint' }
+			ensure_installed = { "vimls", "ts_ls", "lua_ls", "eslint" },
 		},
 	},
 }
@@ -101,18 +107,31 @@ local fzf = require("fzf-lua")
 keymap("n", "<leader>p", function() fzf.files() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Files" }))
 keymap("n", "<leader>f", function() fzf.live_grep() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Live grep (rg)" }))
 keymap("n", "<leader>b", function() fzf.buffers() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Buffers" }))
-keymap("n", "<leader>g", function()
-	fzf.live_grep({ search = vim.fn.expand("<cword>") })
-end, vim.tbl_extend("force", map_opts, { desc = "FZF: Live grep (visual selection)" }))
+keymap("n", "<leader>g", function() fzf.live_grep({ search = vim.fn.expand("<cword>") }) end, vim.tbl_extend("force", map_opts, { desc = "FZF: Live grep (visual selection)" }))
 
 vim.cmd.colorscheme("noirblaze")
 
 -- make background transparent
 local groups = {
-	"Normal", "NormalNC", "SignColumn", "MsgArea", "LineNr", "CursorLineNr",
-	"NonText", "FoldColumn", "StatusLine", "StatusLineNC", "TabLine",
-	"TabLineFill", "TabLineSel", "VertSplit", "EndOfBuffer", "PMenu",
-	"PMenuSel", "PMenuThumb", "WildMenu"
+	"Normal",
+	"NormalNC",
+	"SignColumn",
+	"MsgArea",
+	"LineNr",
+	"CursorLineNr",
+	"NonText",
+	"FoldColumn",
+	"StatusLine",
+	"StatusLineNC",
+	"TabLine",
+	"TabLineFill",
+	"TabLineSel",
+	"VertSplit",
+	"EndOfBuffer",
+	"PMenu",
+	"PMenuSel",
+	"PMenuThumb",
+	"WildMenu",
 }
 
 for _, group in ipairs(groups) do
@@ -153,7 +172,16 @@ local lsps = {
 	ts_ls = {},
 	eslint = {},
 	eslint_d = {},
-	lua_ls = {},
+	lua_ls = {
+		settings = {
+			Lua = {
+				diagnostics = {
+					globals = { "vim", "require" },
+				},
+			},
+		},
+	},
+	vimls = {},
 }
 
 for lsp, conf in pairs(lsps) do
@@ -163,23 +191,23 @@ end
 
 local au = vim.api.nvim_create_autocmd
 
-au('VimResized', {
-	group = vim.api.nvim_create_augroup('autoresize_windows', { clear = true}),
+au("VimResized", {
+	group = vim.api.nvim_create_augroup("autoresize_windows", { clear = true }),
 	callback = function()
 		vim.schedule(function()
-			vim.cmd('wincmd =')
+			vim.cmd("wincmd =")
 		end)
 	end,
 })
 
-au('VimEnter', {
+au("VimEnter", {
 	callback = function()
-		vim.cmd('RainbowParentheses')
-	end
+		vim.cmd("RainbowParentheses")
+	end,
 })
 
-local ts_repeat_move = require "nvim-treesitter-textobjects.repeatable_move"
-local select_to = require "nvim-treesitter-textobjects.select".select_textobject
+local ts_repeat_move = require("nvim-treesitter-textobjects.repeatable_move")
+local select_to = require("nvim-treesitter-textobjects.select").select_textobject
 
 -- keymaps
 -- You can use the capture groups defined in `textobjects.scm`
