@@ -36,6 +36,10 @@
       "rev": "8e2084bf5e40c79c1f42210a6ef96a0a4793a763",
       "src": "https://github.com/neovim/nvim-lspconfig"
     },
+    "nvim-noirbuddy": {
+      "rev": "299dc7c68c29dabdb9564cb78e9169fd5bbca5f7",
+      "src": "https://github.com/jesseleite/nvim-noirbuddy"
+    },
     "nvim-treesitter": {
       "rev": "c82bf96f0a773d85304feeb695e1e23b2207ac35",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter"

@@ -2,8 +2,10 @@ local gh = function(url)
 	return "https://github.com/" .. url
 end
 
-return {
+local plugs = {
 	{ src = gh("n1ghtmare/noirblaze-vim") },
+	{ src = gh("jesseleite/nvim-noirbuddy") },
+  { src = gh("tjdevries/colorbuddy.nvim") },
 	{ src = gh("thaerkh/vim-workspace") },
 	{ src = gh("tpope/vim-fugitive") },
 	{ src = gh("junegunn/rainbow_parentheses.vim") },
@@ -49,3 +51,15 @@ return {
 		},
 	},
 }
+
+
+vim.pack.add(plugs)
+for _, plug in pairs(plugs) do
+	if plug.req then
+		if plug.opts then
+			require(plug.req).setup(plug.opts)
+		else
+			require(plug.req).setup()
+		end
+	end
+end

@@ -1,4 +1,4 @@
-
+vim.g.mapleader = " "
 local keymap = vim.keymap.set
 local ts_repeat_move = require("nvim-treesitter-textobjects.repeatable_move")
 local select_to = require("nvim-treesitter-textobjects.select").select_textobject
