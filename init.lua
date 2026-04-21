@@ -118,8 +118,13 @@ for _, group in ipairs(groups) do
 	vim.api.nvim_set_hl(0, group, { bg = "none" })
 end
 
--- vim.api.nvim_set_hl(0, "@lsp.type.parameter", { link = "Hlargs" })
+vim.api.nvim_set_hl(0, "Parameter", { fg = "#e0af68" })
+vim.api.nvim_set_hl(0, "@lsp.type.parameter", { link = "Parameter" })
+vim.api.nvim_set_hl(0, "@variable.parameter", { link = "Parameter" })
 vim.api.nvim_set_hl(0, "@function", { link = "Function" })
+vim.api.nvim_set_hl(0, "DiagnosticUnnecessary", {})
+vim.api.nvim_set_hl(0, "@lsp.typemod.variable.unused", {})
+vim.api.nvim_set_hl(0, "@lsp.typemod.parameter.unused", {})
 
 -- Workspace options
 local data = vim.fn.stdpath("data")
@@ -151,13 +156,40 @@ vim.g.rainbow_pairs = [['(', ')'], ['[', ']']]
 local lsps = {
 	ts_ls = {},
 	eslint = {},
-	eslint_d = {},
-	lua_ls = {},
+	lua_ls = {
+		settings = {
+			Lua = {
+				workspace = { library = vim.api.nvim_get_runtime_file("", true) },
+				diagnostics = { globals = { "vim" } },
+			}
+		}
+	},
+	vimls = {},
 }
 
 for lsp, conf in pairs(lsps) do
 	vim.lsp.config[lsp] = conf
 	vim.lsp.enable(lsp)
+end
+
+local orig_diag_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
+orig_diag_handler = function(err, result, ctx, config)
+	if result and result.diagnostics then
+		local client = vim.lsp.get_client_by_id(ctx.client_id)
+		local is_ts = client and client.name == "ts_ls"
+		result.diagnostics = vim.tbl_filter(function(d)
+			-- Drop diagnostics tagged as unnecessary (unused variables, etc.)
+			if d.tags then
+				for _, tag in ipairs(d.tags) do
+					if tag == 1 then return false end
+				end
+			end
+			-- JS/TS only: 2304: Cannot find name, 2552: Cannot find name (did you mean)
+			if is_ts and (d.code == 2304 or d.code == 2552) then return false end
+			return true
+		end, result.diagnostics)
+	end
+	orig_diag_handler(err, result, ctx, config)
 end
 
 local au = vim.api.nvim_create_autocmd
