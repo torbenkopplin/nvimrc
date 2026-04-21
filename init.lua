@@ -70,43 +70,33 @@ local plugs = {
 	},
 	{ src = gh("neovim/nvim-lspconfig") },
 	{ src = gh("nvim-tree/nvim-web-devicons") },
-	{ 
+	{
+		src = gh("nvim-treesitter/nvim-treesitter-textobjects"),
+		req = "nvim-treesitter-textobjects",
+		opts = { select = { lookahead = true } },
+	},
+	{
 		src = gh("nvim-treesitter/nvim-treesitter"),
 		req = "nvim-treesitter",
 		opts = {
 			ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json" },
-			highlight = { enable = true, },
+			highlight = { enable = true },
 		}
-	},
-	{ 
-		src = gh("nvim-treesitter/nvim-treesitter-textobjects"),
-		req = "nvim-treesitter-textobjects",
-	},
-	{ src = gh("mason-org/mason.nvim"), req = "mason" },
-	{ 
-		src = gh("mason-org/mason-lspconfig.nvim"),
-		req = "mason-lspconfig",
-		opts = {
-			ensure_installed = { 'vimls', 'ts_ls', 'lua_ls', 'eslint' }
-		},
 	},
 }
 
 vim.pack.add(plugs)
-for _, plug in pairs(plugs) do
+for _, plug in ipairs(plugs) do
 	if plug.req then
-		if plug.opts then
-			require(plug.req).setup(plug.opts)
-		else
-			require(plug.req).setup()
+		local mod = require(plug.req)
+		if mod.setup then
+			mod.setup(plug.opts or {})
 		end
 	end
 end
 
--- (optional) default setup — adjust if you already call fzf.setup() elsewhere
 local map_opts = { noremap = true, silent = true }
 local fzf = require("fzf-lua")
--- Normal mode mappings (like your old fzf.vim mappings)
 keymap("n", "<leader>p", function() fzf.files() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Files" }))
 keymap("n", "<leader>f", function() fzf.live_grep() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Live grep (rg)" }))
 keymap("n", "<leader>b", function() fzf.buffers() end, vim.tbl_extend("force", map_opts, { desc = "FZF: Buffers" }))
@@ -187,27 +177,18 @@ au('VimEnter', {
 	end
 })
 
-local ts_repeat_move = require "nvim-treesitter-textobjects.repeatable_move"
-local select_to = require "nvim-treesitter-textobjects.select".select_textobject
+local ts_select = require("nvim-treesitter-textobjects.select")
+vim.keymap.set({ "x", "o" }, "af", function() ts_select.select_textobject("@function.outer", "textobjects") end)
+vim.keymap.set({ "x", "o" }, "if", function() ts_select.select_textobject("@function.inner", "textobjects") end)
+vim.keymap.set({ "x", "o" }, "ac", function() ts_select.select_textobject("@class.outer", "textobjects") end)
+vim.keymap.set({ "x", "o" }, "ic", function() ts_select.select_textobject("@class.inner", "textobjects") end)
+vim.keymap.set({ "x", "o" }, "as", function() ts_select.select_textobject("@local.scope", "locals") end)
 
--- keymaps
--- You can use the capture groups defined in `textobjects.scm`
-vim.keymap.set({ "x", "o" }, "af", function() select_to("@function.outer", "textobjects") end)
-vim.keymap.set({ "x", "o" }, "if", function() select_to("@function.inner", "textobjects") end)
-vim.keymap.set({ "x", "o" }, "ac", function() select_to("@class.outer", "textobjects") end)
-vim.keymap.set({ "x", "o" }, "ic", function() select_to("@class.inner", "textobjects") end)
--- You can also use captures from other query groups like `locals.scm`
-vim.keymap.set({ "x", "o" }, "as", function() select_to("@local.scope", "locals") end)
--- Repeat movement with ; and ,
--- ensure ; goes forward and , goes backward regardless of the last direction
+local ts_repeat_move = require "nvim-treesitter-textobjects.repeatable_move"
+
 vim.keymap.set({ "n", "x", "o" }, ";", ts_repeat_move.repeat_last_move_next)
 vim.keymap.set({ "n", "x", "o" }, ",", ts_repeat_move.repeat_last_move_previous)
 
--- vim way: ; goes to the direction you were moving.
--- vim.keymap.set({ "n", "x", "o" }, ";", ts_repeat_move.repeat_last_move)
--- vim.keymap.set({ "n", "x", "o" }, ",", ts_repeat_move.repeat_last_move_opposite)
-
--- Optionally, make builtin f, F, t, T also repeatable with ; and ,
 vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f_expr, { expr = true })
 vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F_expr, { expr = true })
 vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t_expr, { expr = true })
