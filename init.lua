@@ -45,8 +45,7 @@ keymap('n', '<C-å>', function() vim.diagnostic.jump({count = -1, }) end)
 keymap('n', '<C-ä>', function() vim.diagnostic.jump({count = 1, }) end)
 local gh = function(url) return "https://github.com/" .. url end
 local plugs = {
-	{ src = gh("n1ghtmare/noirblaze-vim"), },
-	{ src = gh("thaerkh/vim-workspace"), },
+{ src = gh("thaerkh/vim-workspace"), },
 	{ src = gh("tpope/vim-fugitive"), },
 	{ src = gh("junegunn/rainbow_parentheses.vim") },
   {
@@ -118,13 +117,7 @@ for _, group in ipairs(groups) do
 	vim.api.nvim_set_hl(0, group, { bg = "none" })
 end
 
-vim.api.nvim_set_hl(0, "Parameter", { fg = "#e0af68" })
-vim.api.nvim_set_hl(0, "@lsp.type.parameter", { link = "Parameter" })
-vim.api.nvim_set_hl(0, "@variable.parameter", { link = "Parameter" })
 vim.api.nvim_set_hl(0, "@function", { link = "Function" })
-vim.api.nvim_set_hl(0, "DiagnosticUnnecessary", {})
-vim.api.nvim_set_hl(0, "@lsp.typemod.variable.unused", {})
-vim.api.nvim_set_hl(0, "@lsp.typemod.parameter.unused", {})
 
 -- Workspace options
 local data = vim.fn.stdpath("data")
