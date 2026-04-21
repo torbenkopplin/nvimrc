@@ -173,7 +173,7 @@ for lsp, conf in pairs(lsps) do
 end
 
 local orig_diag_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
-orig_diag_handler = function(err, result, ctx, config)
+vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
 	if result and result.diagnostics then
 		local client = vim.lsp.get_client_by_id(ctx.client_id)
 		local is_ts = client and client.name == "ts_ls"
