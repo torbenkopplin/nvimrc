@@ -23,6 +23,7 @@ keymap('n', '<leader>e', function() vim.diagnostic.open_float() end)
 keymap('n', '<leader>r', vim.lsp.buf.references)
 keymap('n', '<leader>d', vim.lsp.buf.definition)
 keymap('n', '<leader>s', vim.lsp.buf.rename)
+keymap('n', '<CR>', vim.lsp.buf.definition)
 
 keymap('n', '`', "'")
 keymap('n', "'", '`')
@@ -34,14 +35,22 @@ keymap('n', 'gk', 'k')
 
 keymap('n', '-', '/')
 
+-- keymap('n', 'å', '[')
+-- keymap('n', 'ä', ']')
+
+keymap('n', 'åd', function() vim.diagnostic.jump({count = -1,}) end)
+keymap('n', 'äd', function() vim.diagnostic.jump({count = 1,}) end)
+
+keymap('n', '<C-å>', function() vim.diagnostic.jump({count = -1, }) end)
+keymap('n', '<C-ä>', function() vim.diagnostic.jump({count = 1, }) end)
 local gh = function(url) return "https://github.com/" .. url end
 local plugs = {
 	{ src = gh("n1ghtmare/noirblaze-vim"), },
 	{ src = gh("thaerkh/vim-workspace"), },
 	{ src = gh("tpope/vim-fugitive"), },
 	{ src = gh("junegunn/rainbow_parentheses.vim") },
-  { 
-		src = gh("ibhagwan/fzf-lua"), 
+  {
+		src = gh("ibhagwan/fzf-lua"),
 		req = "fzf-lua",
 		opts = {
 			winopts = {
