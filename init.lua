@@ -78,7 +78,7 @@ local plugs = {
 		src = gh("nvim-treesitter/nvim-treesitter"),
 		req = "nvim-treesitter",
 		opts = {
-			ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json" },
+			ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json", "xml" },
 			highlight = { enable = true },
 		}
 	},
@@ -200,6 +200,11 @@ au("VimEnter", {
 	callback = function()
 		vim.cmd("RainbowParentheses")
 	end,
+})
+
+au("BufWritePost", {
+	pattern = vim.fn.stdpath("config") .. "/colors/noirblaze.lua",
+	callback = function() vim.cmd.colorscheme("noirblaze") end,
 })
 
 local ts_select = require("nvim-treesitter-textobjects.select")

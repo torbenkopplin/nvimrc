@@ -151,9 +151,25 @@ hi("@property",              { fg = c.fg1 })
 hi("@attribute",             { fg = c.fg4 })
 hi("@namespace",             { fg = c.dim2 })
 hi("@include",               { fg = c.dim2 })
-hi("@tag",                   { fg = c.dim2 })
-hi("@tag.attribute",         { fg = c.fg4 })
-hi("@tag.delimiter",         { fg = c.dim2 })
+hi("@tag",                   { fg = c.pink })   -- local tag name
+hi("@tag.attribute",         { fg = c.dim2 })
+hi("@tag.delimiter",         { fg = c.dim1 })  -- < > </ />
+hi("@attribute.name",        { fg = c.fg0 })
+hi("@attribute.value",       { fg = c.dim3, italic = true })
+
+-- Vim syntax fallback for XML/HTML (when treesitter is not active)
+hi("xmlTag",          { fg = c.dim1 })                -- < > delimiters
+hi("xmlEndTag",       { fg = c.dim1 })
+hi("xmlNamespace",    { fg = c.dim4, italic = true }) -- ns: prefix in <ns:tag>
+hi("xmlTagName",      { fg = c.pink })                -- local tag name
+hi("xmlAttrib",       { fg = c.fg0 })
+hi("xmlAttribPunct",  { fg = c.dim2 })
+hi("xmlString",       { fg = c.dim3, italic = true })
+hi("htmlTag",         { fg = c.dim1 })
+hi("htmlEndTag",      { fg = c.dim1 })
+hi("htmlTagName",     { fg = c.pink })
+hi("htmlArg",         { fg = c.fg0 })
+hi("htmlString",      { fg = c.dim3, italic = true })
 hi("@comment",               { fg = c.dim1, italic = true })
 
 -- LSP semantic tokens
