@@ -194,19 +194,19 @@ end
 
 local au = vim.api.nvim_create_autocmd
 
-au('VimResized', {
-	group = vim.api.nvim_create_augroup('autoresize_windows', { clear = true}),
+au("VimResized", {
+	group = vim.api.nvim_create_augroup("autoresize_windows", { clear = true }),
 	callback = function()
 		vim.schedule(function()
-			vim.cmd('wincmd =')
+			vim.cmd("wincmd =")
 		end)
 	end,
 })
 
-au('VimEnter', {
+au("VimEnter", {
 	callback = function()
-		vim.cmd('RainbowParentheses')
-	end
+		vim.cmd("RainbowParentheses")
+	end,
 })
 
 local ts_select = require("nvim-treesitter-textobjects.select")
