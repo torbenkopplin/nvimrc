@@ -122,7 +122,7 @@ hi("SpellRare",  { fg = c.pink })
 -- Treesitter
 hi("@variable",              { fg = c.fg1 })
 hi("@variable.builtin",      { fg = c.white })
-hi("@variable.parameter",    { fg = "#e0af68" })
+hi("@variable.parameter",    { fg = c.pink })
 hi("@variable.member",       { fg = c.fg1 })
 hi("@constant",              { fg = c.pink })
 hi("@constant.builtin",      { fg = c.pink })
@@ -157,7 +157,7 @@ hi("@tag.delimiter",         { fg = c.dim2 })
 hi("@comment",               { fg = c.dim1, italic = true })
 
 -- LSP semantic tokens
-hi("@lsp.type.parameter",    { fg = "#e0af68" })
+hi("@lsp.type.parameter",    { fg = c.pink })
 hi("@lsp.type.variable",     { fg = c.fg1 })
 hi("@lsp.type.property",     { fg = c.fg1 })
 hi("@lsp.type.function",     { fg = c.white })
