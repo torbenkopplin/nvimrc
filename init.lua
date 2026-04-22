@@ -142,7 +142,8 @@ vim.g.workspace_undodir = data .. "/undo//"
 vim.g.workspace_autocreate = 1
 vim.g.workspace_autosave = 0
 
-vim.g.rainbow_pairs = [['(', ')'], ['[', ']']]
+vim.api.nvim_set_var('rainbow#pairs', {{'(', ')'}, {'[', ']'}, {'{', '}'}})
+
 
 local lsps = {
   ts_ls = {},
