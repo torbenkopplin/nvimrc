@@ -45,6 +45,7 @@ local plugs = {
   { src = gh("thaerkh/vim-workspace"), },
   { src = gh("tpope/vim-fugitive"), },
   { src = gh("junegunn/rainbow_parentheses.vim") },
+  { src = gh("iamcco/markdown-preview.nvim") },
   {
     src = gh("ibhagwan/fzf-lua"),
     req = "fzf-lua",
@@ -75,7 +76,7 @@ local plugs = {
     src = gh("nvim-treesitter/nvim-treesitter"),
     req = "nvim-treesitter",
     opts = {
-      ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json", "xml" },
+      ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json", "xml", "markdown" },
       highlight = { enable = true },
     }
   },
@@ -222,3 +223,10 @@ vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f_expr, { expr = t
 vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F_expr, { expr = true })
 vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t_expr, { expr = true })
 vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T_expr, { expr = true })
+
+-- TODO: fix a better readable look.
+vim.g.mkdp_theme = "light" 
+vim.g.mkdp_auto_start = 1
+vim.g.mkdp_port = "8890"
+vim.g.mkdp_browser = "google-chrome"
+vim.g.mkdp_open_ip = "127.0.0.1"
