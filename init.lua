@@ -67,11 +67,7 @@ local plugs = {
   },
   { src = gh("neovim/nvim-lspconfig") },
   { src = gh("nvim-tree/nvim-web-devicons") },
-  {
-    src = gh("nvim-treesitter/nvim-treesitter-textobjects"),
-    req = "nvim-treesitter-textobjects",
-    opts = { select = { lookahead = true } },
-  },
+  { src = gh("nvim-treesitter/nvim-treesitter-textobjects"), },
   { src = gh("nvim-treesitter/nvim-treesitter") },
 }
 
