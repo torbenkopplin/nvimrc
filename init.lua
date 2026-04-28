@@ -72,14 +72,7 @@ local plugs = {
     req = "nvim-treesitter-textobjects",
     opts = { select = { lookahead = true } },
   },
-  {
-    src = gh("nvim-treesitter/nvim-treesitter"),
-    req = "nvim-treesitter",
-    opts = {
-      ensure_installed = { "javascript", "typescript", "jsdoc", "cpp", "lua", "html", "css", "json", "xml", "markdown" },
-      highlight = { enable = true },
-    }
-  },
+  { src = gh("nvim-treesitter/nvim-treesitter") },
 }
 
 vim.pack.add(plugs)
@@ -91,6 +84,16 @@ for _, plug in ipairs(plugs) do
     end
   end
 end
+
+-- nvim-treesitter (main branch) requires explicit install + per-buffer start
+local ts_parsers = { "javascript", "typescript", "tsx", "jsdoc", "cpp", "lua", "html", "css", "json", "xml", "markdown" }
+require("nvim-treesitter").install(ts_parsers)
+
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    pcall(vim.treesitter.start, args.buf)
+  end,
+})
 
 local map_opts = { noremap = true, silent = true }
 local fzf = require("fzf-lua")
@@ -200,11 +203,6 @@ au("VimEnter", {
   callback = function()
     vim.cmd("RainbowParentheses")
   end,
-})
-
-au("BufWritePost", {
-  pattern = vim.fn.stdpath("config") .. "/colors/noirblaze.lua",
-  callback = function() vim.cmd.colorscheme("noirblaze") end,
 })
 
 local ts_select = require("nvim-treesitter-textobjects.select")
