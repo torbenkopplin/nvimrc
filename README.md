@@ -44,7 +44,7 @@ Parameter highlighting also uses LSP semantic tokens (`@lsp.type.parameter`) whi
 ### Arch / CachyOS
 
 ```sh
-sudo pacman -S typescript-language-server lua-language-server vscode-langservers-extracted
+sudo pacman -S --needed typescript-language-server lua-language-server vscode-langservers-extracted
 npm install -g vim-language-server
 ```
 

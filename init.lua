@@ -169,6 +169,7 @@ for lsp, conf in pairs(lsps) do
 end
 
 local orig_diag_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
+---@diagnostic disable-next-line: duplicate-set-field
 vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
   if result and result.diagnostics then
     local client = vim.lsp.get_client_by_id(ctx.client_id)
@@ -223,8 +224,47 @@ vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t_expr, { expr = t
 vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T_expr, { expr = true })
 
 -- TODO: fix a better readable look.
-vim.g.mkdp_theme = "light" 
+vim.g.mkdp_theme = "light"
 vim.g.mkdp_auto_start = 1
 vim.g.mkdp_port = "8890"
 vim.g.mkdp_browser = "google-chrome"
 vim.g.mkdp_open_ip = "127.0.0.1"
+
+
+
+vim.api.nvim_create_user_command("PackClean", function()
+    local all_plugins = vim.pack.get()
+    local inactive_names = {}
+
+    for _, plugin in ipairs(all_plugins) do
+        if not plugin.active then
+            table.insert(inactive_names, plugin.spec.name)
+        end
+    end
+
+    if #inactive_names == 0 then
+        vim.notify("No unused plugins found.")
+        return
+    end
+
+    local choice = vim.fn.confirm("Remove unused plugins?", "&Yes\n&No", 2)
+    if choice == 1 then
+        vim.pack.del(inactive_names)
+        vim.notify("Removed " .. #inactive_names .. " plugins.")
+    end
+end, {
+  desc = "clear unused plugins"
+})
+
+vim.api.nvim_create_user_command('PackUpdate', function(opts)
+    local plugins = opts.fargs
+    local force = opts.bang
+    vim.pack.update(plugins, { force = force })
+end, {
+    nargs = '*',
+    bang = true, -- Allows ! for force update
+    complete = function(arg_lead, cmdline, cursor_pos)
+        return {}
+    end,
+    desc = 'Update vim.pack plugins'
+})
