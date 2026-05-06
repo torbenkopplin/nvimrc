@@ -46,6 +46,14 @@ local plugs = {
   { src = gh("junegunn/rainbow_parentheses.vim") },
   { src = gh("iamcco/markdown-preview.nvim") },
   { src = gh("neovim/nvim-lspconfig") },
+  { src = gh("mason-org/mason.nvim"), req = "mason" },
+  {
+    src = gh("mason-org/mason-lspconfig.nvim"),
+    req = "mason-lspconfig",
+    opts = {
+      ensure_installed = { "ts_ls", "eslint", "vimls", "lua_ls", "lemminx" },
+    },
+  },
   { src = gh("nvim-tree/nvim-web-devicons") },
   { src = gh("nvim-treesitter/nvim-treesitter") },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
@@ -151,6 +159,7 @@ local lsps = {
   ts_ls = {},
   eslint = {},
   vimls = {},
+  lemminx = {},
   lua_ls = {
     settings = {
       Lua = {
