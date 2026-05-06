@@ -95,7 +95,7 @@ local ts_select = require("nvim-treesitter-textobjects.select").select_textobjec
 local ts_move = require("nvim-treesitter-textobjects.repeatable_move")
 for lhs, q in pairs({
   af = "@function.outer", ["if"] = "@function.inner",
-  ac = "@class.outer",    ic = "@class.inner",
+  ac = "@class.outer", ic = "@class.inner",
 }) do
   keymap({ "x", "o" }, lhs, function() ts_select(q, "textobjects") end)
 end
@@ -109,9 +109,9 @@ keymap({ "n", "x", "o" }, "T", ts_move.builtin_T_expr, { expr = true })
 
 -- FZF
 local fzf = require("fzf-lua")
-keymap("n", "<leader>p", fzf.files,     { desc = "FZF: Files" })
+keymap("n", "<leader>p", fzf.files, { desc = "FZF: Files" })
 keymap("n", "<leader>f", fzf.live_grep, { desc = "FZF: Live grep" })
-keymap("n", "<leader>b", fzf.buffers,   { desc = "FZF: Buffers" })
+keymap("n", "<leader>b", fzf.buffers, { desc = "FZF: Buffers" })
 keymap("n", "<leader>g", function() fzf.live_grep({ search = vim.fn.expand("<cword>") }) end,
   { desc = "FZF: Grep <cword>" })
 
@@ -205,19 +205,19 @@ end
 -- Autocmds
 local au = vim.api.nvim_create_autocmd
 au("VimResized", { callback = function() vim.schedule(function() vim.cmd("wincmd =") end) end })
-au("VimEnter",   { callback = function() vim.cmd("RainbowParentheses") end })
+au("VimEnter", { callback = function() vim.cmd("RainbowParentheses") end })
 au("FileType", {
-	pattern = "qf",
-	callback = function()
-		keymap("n", "o", function()
-			local qf_win = vim.api.nvim_get_current_win()
-			local ln = vim.api.nvim_win_get_cursor(0)[1]
-			vim.cmd(ln .. "cc")
-			vim.api.nvim_set_current_win(qf_win)
-		end, { buffer = true, silent = true })
+  pattern = "qf",
+  callback = function()
+    keymap("n", "o", function()
+      local qf_win = vim.api.nvim_get_current_win()
+      local ln = vim.api.nvim_win_get_cursor(0)[1]
+      vim.cmd(ln .. "cc")
+      vim.api.nvim_set_current_win(qf_win)
+    end, { buffer = true, silent = true })
 
-		keymap("n", "<CR>", "<CR>:cclose<CR>")
-	end,
+    keymap("n", "<CR>", "<CR>:cclose<CR>")
+  end,
 })
 
 -- Suppress OSC 9;4 progress sequences (kitty <0.36 forwards them to the desktop notification daemon)
@@ -245,4 +245,4 @@ vim.api.nvim_create_user_command("PackUpdate", function(opts)
 end, { nargs = "*", bang = true, desc = "Update plugins" })
 
 -- Outline
-keymap('n', "<leader>o", "<cmd>Outline<CR>", {desc = "Toggle outline"})
+keymap('n', "<leader>o", "<cmd>Outline<CR>", { desc = "Toggle outline" })
