@@ -3,9 +3,11 @@ vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
 vim.opt.wrap = false
+vim.opt.scrolloff = 3
 vim.opt.termguicolors = true
 vim.opt.splitbelow = true
 vim.opt.splitright = true
+vim.opt.completeopt = { "menu", "menuone", "noinsert", "popup", "fuzzy" }
 vim.o.winborder = "rounded"
 vim.o.mouse = ""
 vim.g.mapleader = " "
@@ -47,6 +49,18 @@ local plugs = {
   { src = gh("nvim-tree/nvim-web-devicons") },
   { src = gh("nvim-treesitter/nvim-treesitter") },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
+  { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
+  {
+    src = gh("hedyhli/outline.nvim"),
+    req = "outline",
+    opts = {
+      keymaps = {
+        goto_location = "<S-CR>",
+        peek_location = "o",
+        goto_and_close = "<CR>",
+      },
+    },
+  },
   {
     src = gh("ibhagwan/fzf-lua"),
     req = "fzf-lua",
@@ -107,7 +121,7 @@ for _, g in ipairs({
   "Normal", "NormalNC", "SignColumn", "MsgArea", "LineNr", "CursorLineNr",
   "NonText", "FoldColumn", "StatusLine", "StatusLineNC", "TabLine",
   "TabLineFill", "TabLineSel", "VertSplit", "EndOfBuffer", "PMenu",
-  "PMenuSel", "PMenuThumb", "WildMenu",
+  "PMenuThumb", "WildMenu",
 }) do
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
@@ -151,6 +165,28 @@ for lsp, conf in pairs(lsps) do
   vim.lsp.enable(lsp)
 end
 
+-- Native LSP completion + signature help on attach
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client then return end
+    if client:supports_method("textDocument/completion") then
+      vim.lsp.completion.enable(true, args.data.client_id, args.buf, { autotrigger = true })
+    end
+    if client:supports_method("textDocument/signatureHelp") then
+      local chars = (client.server_capabilities.signatureHelpProvider or {}).triggerCharacters or { "(", "," }
+      vim.api.nvim_create_autocmd("InsertCharPre", {
+        buffer = args.buf,
+        callback = function()
+          if vim.tbl_contains(chars, vim.v.char) then
+            vim.schedule(vim.lsp.buf.signature_help)
+          end
+        end,
+      })
+    end
+  end,
+})
+
 -- Drop noisy diagnostics: unused (tag 1) and TS "cannot find name" (2304/2552)
 local orig_publish = vim.lsp.handlers["textDocument/publishDiagnostics"]
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -170,6 +206,22 @@ end
 local au = vim.api.nvim_create_autocmd
 au("VimResized", { callback = function() vim.schedule(function() vim.cmd("wincmd =") end) end })
 au("VimEnter",   { callback = function() vim.cmd("RainbowParentheses") end })
+au("FileType", {
+	pattern = "qf",
+	callback = function()
+		keymap("n", "o", function()
+			local qf_win = vim.api.nvim_get_current_win()
+			local ln = vim.api.nvim_win_get_cursor(0)[1]
+			vim.cmd(ln .. "cc")
+			vim.api.nvim_set_current_win(qf_win)
+		end, { buffer = true, silent = true })
+
+		keymap("n", "<CR>", "<CR>:cclose<CR>")
+	end,
+})
+
+-- Suppress OSC 9;4 progress sequences (kitty <0.36 forwards them to the desktop notification daemon)
+vim.api.nvim_create_augroup("nvim.progress", { clear = true })
 
 -- Markdown preview
 vim.g.mkdp_theme      = "light"
@@ -191,3 +243,6 @@ end, { desc = "Remove unused plugins" })
 vim.api.nvim_create_user_command("PackUpdate", function(opts)
   vim.pack.update(opts.fargs, { force = opts.bang })
 end, { nargs = "*", bang = true, desc = "Update plugins" })
+
+-- Outline
+keymap('n', "<leader>o", "<cmd>Outline<CR>", {desc = "Toggle outline"})
