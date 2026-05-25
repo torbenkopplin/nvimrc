@@ -29,6 +29,10 @@ keymap("n", "gk", "k")
 keymap("n", "-", "/")
 keymap("n", "å", "[", { remap = true })
 keymap("n", "ä", "]", { remap = true })
+keymap("n", "<C-h>", "<C-w>h")
+keymap("n", "<C-j>", "<C-w>j")
+keymap("n", "<C-k>", "<C-w>k")
+keymap("n", "<C-l>", "<C-w>l")
 
 -- LSP / diagnostics keymaps
 keymap("n", "<leader>e", vim.diagnostic.open_float)
@@ -58,6 +62,14 @@ local plugs = {
   { src = gh("nvim-treesitter/nvim-treesitter") },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
+  {
+    src = gh("kevalin/mermaid.nvim"),
+    req = "mermaid",
+    opts = {
+      lint = { enabled = true, command = "mmdc" },
+      preview = { renderer = "mermaid.js", theme = "dark" },
+    },
+  },
   {
     src = gh("hedyhli/outline.nvim"),
     req = "outline",
@@ -92,7 +104,7 @@ end
 -- Treesitter (main branch needs explicit install + per-buffer start)
 require("nvim-treesitter").install({
   "javascript", "typescript", "tsx", "jsdoc", "cpp", "lua",
-  "html", "css", "json", "xml", "markdown",
+  "html", "css", "json", "xml", "markdown", "mermaid",
 })
 vim.api.nvim_create_autocmd("FileType", {
   callback = function(args) pcall(vim.treesitter.start, args.buf) end,
@@ -216,6 +228,13 @@ local au = vim.api.nvim_create_autocmd
 au("VimResized", { callback = function() vim.schedule(function() vim.cmd("wincmd =") end) end })
 au("VimEnter", { callback = function() vim.cmd("RainbowParentheses") end })
 au("FileType", {
+  pattern = "mermaid",
+  callback = function(args)
+    keymap("n", "<leader>mp", "<cmd>MermaidPreview<CR>", { buffer = args.buf, desc = "Mermaid preview" })
+    keymap("n", "<leader>mf", "<cmd>MermaidFormat<CR>", { buffer = args.buf, desc = "Mermaid format" })
+  end,
+})
+au("FileType", {
   pattern = "qf",
   callback = function()
     keymap("n", "o", function()
@@ -233,8 +252,8 @@ au("FileType", {
 vim.api.nvim_create_augroup("nvim.progress", { clear = true })
 
 -- Markdown preview
-vim.g.mkdp_theme      = "light"
-vim.g.mkdp_auto_start = 1
+vim.g.mkdp_theme      = "dark"
+vim.g.mkdp_auto_start = 0
 vim.g.mkdp_port       = "8890"
 vim.g.mkdp_browser    = "google-chrome"
 vim.g.mkdp_open_ip    = "127.0.0.1"
