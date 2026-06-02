@@ -13,6 +13,7 @@ vim.o.mouse = ""
 vim.g.mapleader = " "
 
 function _G.git_branch()
+  if vim.fn.exists("*FugitiveHead") == 0 then return "" end
   local branch = vim.fn.FugitiveHead()
 
   if branch ~= "" then
