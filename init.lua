@@ -12,9 +12,24 @@ vim.o.winborder = "rounded"
 vim.o.mouse = ""
 vim.g.mapleader = " "
 
-local keymap = vim.keymap.set
+function _G.git_branch()
+  local branch = vim.fn.FugitiveHead()
 
+  if branch ~= "" then
+    return "%#StatusLineGit#  " .. branch .. " %*"
+  end
+
+  return ""
+end
+
+vim.o.statusline = table.concat({
+  "%f",
+  " %{%v:lua.git_branch()%}",
+  "%=",
+  "%l:%c",
+})
 -- Editor keymaps
+local keymap = vim.keymap.set
 keymap("n", "<leader>w", ":w<CR>")
 keymap("n", "<leader>q", ":q<CR>")
 keymap("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>")
@@ -146,6 +161,13 @@ for _, g in ipairs({
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
 vim.api.nvim_set_hl(0, "@function", { link = "Function" })
+
+local function set_statusline_git_hl()
+  local fg = vim.api.nvim_get_hl(0, { name = "Function", link = false }).fg
+  vim.api.nvim_set_hl(0, "StatusLineGit", { fg = fg, bg = "none", bold = true })
+end
+set_statusline_git_hl()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = set_statusline_git_hl })
 
 -- Persistence
 local data = vim.fn.stdpath("data")
