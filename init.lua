@@ -66,6 +66,7 @@ local plugs = {
   { src = gh("junegunn/rainbow_parentheses.vim") },
   { src = gh("iamcco/markdown-preview.nvim") },
   { src = gh("neovim/nvim-lspconfig") },
+  { src = gh("mfussenegger/nvim-lint") },
   { src = gh("mason-org/mason.nvim"), req = "mason" },
   {
     src = gh("mason-org/mason-lspconfig.nvim"),
@@ -245,6 +246,13 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx,
   end
   orig_publish(err, result, ctx, config)
 end
+
+-- Linting (nvim-lint): xmllint for XML files
+require("lint").linters_by_ft = { xml = { "xmllint" } }
+vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost", "InsertLeave" }, {
+  pattern = "*.xml",
+  callback = function() require("lint").try_lint() end,
+})
 
 -- Autocmds
 local au = vim.api.nvim_create_autocmd
