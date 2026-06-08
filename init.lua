@@ -7,6 +7,7 @@ vim.opt.scrolloff = 3
 vim.opt.termguicolors = true
 vim.opt.splitbelow = true
 vim.opt.splitright = true
+vim.opt.laststatus = 3 -- single global statusline; windows divided by WinSeparator
 vim.opt.completeopt = { "menu", "menuone", "noinsert", "popup", "fuzzy" }
 vim.o.winborder = "rounded"
 vim.o.mouse = ""
