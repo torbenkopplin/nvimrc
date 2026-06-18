@@ -290,8 +290,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.api.nvim_create_autocmd("InsertCharPre", {
         buffer = args.buf,
         callback = function()
-          if vim.tbl_contains(chars, vim.v.char) then
-            vim.schedule(vim.lsp.buf.signature_help)
+          local char = vim.v.char
+          -- Whitespace keeps an already-open popup alive (CursorMovedI would
+          -- otherwise close it on the next keystroke); it won't open a new one.
+          local win = vim.b[args.buf].lsp_floating_preview
+          local refresh_on_ws = char:match("%s") and win and vim.api.nvim_win_is_valid(win)
+          if vim.tbl_contains(chars, char) or refresh_on_ws then
+            vim.schedule(function()
+              vim.lsp.buf.signature_help({ focus = false, silent = true })
+            end)
           end
         end,
       })
