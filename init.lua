@@ -362,6 +362,22 @@ au("LspAttach", {
 })
 
 au("VimResized", { callback = function() vim.schedule(function() vim.cmd("wincmd =") end) end })
+
+-- The runtime XML indenter (XmlIndentGet(v:lnum,1)) gates on legacy :syntax via
+-- synID() to skip tags inside comments/strings. We highlight with Treesitter and
+-- never enable :syntax, so that check always fails and nested tags stay flush.
+-- Re-run it with the syntax check off (trailing arg 1 -> 0). Deferred so it lands
+-- after the runtime indent file has set indentexpr.
+au("FileType", {
+  callback = function(args)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(args.buf) then return end
+      local ie = vim.bo[args.buf].indentexpr
+      local fixed = ie:gsub("XmlIndentGet%(v:lnum,%s*1%)", "XmlIndentGet(v:lnum,0)")
+      if fixed ~= ie then vim.bo[args.buf].indentexpr = fixed end
+    end)
+  end,
+})
 au("VimEnter", { callback = function() vim.cmd("RainbowParentheses") end })
 au("FileType", {
   pattern = "mermaid",
