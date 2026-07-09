@@ -411,7 +411,7 @@ vim.api.nvim_create_augroup("nvim.progress", { clear = true })
 vim.g.mkdp_theme      = "dark"
 vim.g.mkdp_auto_start = 0
 vim.g.mkdp_port       = "8890"
-vim.g.mkdp_browser    = "google-chrome"
+vim.g.mkdp_browser    = vim.fn.executable("google-chrome") == 1 and "google-chrome" or "chromium"
 vim.g.mkdp_open_ip    = "127.0.0.1"
 
 -- :PackClean / :PackUpdate
