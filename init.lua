@@ -185,6 +185,10 @@ for _, plug in ipairs(plugs) do
   if plug.req then require(plug.req).setup(plug.opts or {}) end
 end
 
+-- Native undotree (bundled optional plugin)
+vim.cmd.packadd("nvim.undotree")
+keymap("n", "<leader>u", "<cmd>Undotree<CR>", { desc = "Toggle undotree" })
+
 -- Treesitter (main branch needs explicit install + per-buffer start)
 require("nvim-treesitter").install({
   "javascript", "typescript", "tsx", "jsdoc", "cpp", "lua",
