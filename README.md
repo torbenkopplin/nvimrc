@@ -2,12 +2,23 @@
 
 Neovim 0.11+ configuration.
 
+## Layout
+
+| Path | Content |
+|---|---|
+| `init.lua` | options, keymaps, plugin list, LSP/treesitter setup, autocmds |
+| `lua/autopairs.lua` | hand-rolled auto-pairs, XML/HTML tag auto-close, smart `<CR>` |
+| `lua/diagnostics-filter.lua` | drops noisy diagnostics (unused vars, TS "cannot find name") |
+| `lua/eslint-deps.lua` | offers to run the package manager when eslint attaches without `node_modules` |
+| `colors/noirblaze.lua` | colorscheme |
+| `after/queries/` | treesitter highlight query overrides (xml, html) |
+
 ## Requirements
 
 - Neovim ≥ 0.11
 - git
 - `gcc` or `clang` — required for compiling treesitter parsers (`tree-sitter-cli` is **not** needed)
-- Node.js — required for `ts_ls` and `eslint`
+- Node.js + npm — required by mason to install several of the language servers
 
 ## First-time setup
 
@@ -22,9 +33,9 @@ git clone git@github.com:torbenkopplin/nvimrc
 ln -s nvimrc ~/.config/nvim
 ```
 
-**2. Start Neovim — plugins auto-install**
+**2. Start Neovim — everything auto-installs**
 
-`vim.pack.add` downloads all plugins on first launch. Treesitter parsers are queued for compilation via `ensure_installed`.
+`vim.pack.add` downloads all plugins on first launch. Treesitter parsers are queued for compilation via `require("nvim-treesitter").install(...)`, and mason installs the LSP servers (`ensure_installed` in mason-lspconfig) plus extra tools like `stylua`.
 
 **3. Quit and reopen**
 
@@ -32,43 +43,17 @@ Parsers finish compiling on the first launch. A second start gives you full tree
 
 ## LSP servers
 
-Parameter highlighting also uses LSP semantic tokens (`@lsp.type.parameter`) which requires the server binaries to be present in `PATH`. The config enables four servers:
+All servers are installed automatically by mason on first launch — no manual installs needed.
 
-| Server | Binary | Purpose |
-|---|---|---|
-| `ts_ls` | `typescript-language-server` | TypeScript / JavaScript |
-| `eslint` | `vscode-eslint-language-server` | Linting |
-| `lua_ls` | `lua-language-server` | Lua |
-| `vimls` | `vim-language-server` | Vimscript |
+| Server | Purpose |
+|---|---|
+| `tsgo` | TypeScript / JavaScript (TypeScript 7 native LSP) |
+| `eslint` | Linting |
+| `lua_ls` | Lua |
+| `vimls` | Vimscript |
+| `lemminx` | XML |
 
-### Arch / CachyOS
-
-```sh
-sudo pacman -S --needed typescript-language-server lua-language-server vscode-langservers-extracted
-npm install -g vim-language-server
-```
-
-### Ubuntu / Debian
-
-```sh
-sudo apt install gcc nodejs npm
-npm install -g typescript-language-server typescript vim-language-server
-```
-
-`lua-language-server` is not in apt — install via snap or download a release binary:
-
-```sh
-sudo snap install lua-language-server
-# or grab a release from https://github.com/LuaLS/lua-language-server/releases
-```
-
-### Other distros / npm
-
-```sh
-npm install -g typescript-language-server typescript vim-language-server
-```
-
-`lua-language-server` — see <https://luals.github.io/#other-install>
+Parameter highlighting uses LSP semantic tokens (`@lsp.type.parameter`) in addition to treesitter, so it only appears once the servers are running.
 
 ## Verify
 

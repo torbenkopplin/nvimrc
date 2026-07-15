@@ -1,13 +1,13 @@
--- Options
-vim.opt.tabstop = 2
-vim.opt.shiftwidth = 2
-vim.opt.expandtab = true
-vim.opt.wrap = false
-vim.opt.scrolloff = 3
-vim.opt.termguicolors = true
-vim.opt.splitbelow = true
-vim.opt.splitright = true
-vim.opt.laststatus = 3 -- single global statusline; windows divided by WinSeparator
+-- Options (vim.o for scalars, vim.opt for list-valued options)
+vim.o.tabstop = 2
+vim.o.shiftwidth = 2
+vim.o.expandtab = true
+vim.o.wrap = false
+vim.o.scrolloff = 3
+vim.o.termguicolors = true
+vim.o.splitbelow = true
+vim.o.splitright = true
+vim.o.laststatus = 3 -- single global statusline; windows divided by WinSeparator
 vim.opt.completeopt = { "menu", "menuone", "noinsert", "popup", "fuzzy" }
 vim.o.cursorline = true
 vim.o.winborder = "rounded"
@@ -18,9 +18,7 @@ function _G.git_branch()
   if vim.fn.exists("*FugitiveHead") == 0 then return "" end
   local branch = vim.fn.FugitiveHead()
 
-  if branch ~= "" then
-    return "%#StatusLineGit#  " .. branch .. " %*"
-  end
+  if branch ~= "" then return "%#StatusLineGit#  " .. branch .. " %*" end
 
   return ""
 end
@@ -60,72 +58,8 @@ keymap("n", "<leader>s", vim.lsp.buf.rename)
 keymap("n", "<leader>i", vim.lsp.buf.format)
 keymap("n", "<CR>", vim.lsp.buf.definition)
 
--- Auto-pairs + smart <CR> (drop a pair's closer onto its own indented line)
-local function cursor_chars()
-  local col = vim.fn.col(".")
-  local line = vim.fn.getline(".")
-  return line:sub(col - 1, col - 1), line:sub(col, col) -- char before / after cursor
-end
-
-local close_of = { ["("] = ")", ["["] = "]", ["{"] = "}" }
-for open, close in pairs(close_of) do
-  keymap("i", open, function()
-    local _, after = cursor_chars()
-    if after == "" or after:match("[%s%)%]},;'\"]") then return open .. close .. "<Left>" end
-    return open
-  end, { expr = true })
-end
-for close in pairs({ [")"] = true, ["]"] = true, ["}"] = true }) do
-  keymap("i", close, function()
-    local _, after = cursor_chars()
-    return after == close and "<Right>" or close -- skip over the existing closer
-  end, { expr = true })
-end
-
-for _, q in ipairs({ '"', "'", "`" }) do
-  keymap("i", q, function()
-    local before, after = cursor_chars()
-    if after == q then return "<Right>" end                      -- skip over
-    if before:match("[%w\\]") or after:match("[%w]") then return q end -- apostrophe / wrap
-    return q .. q .. "<Left>"
-  end, { expr = true })
-end
-
-keymap("i", "<BS>", function()
-  local before, after = cursor_chars()
-  local pair = { ["("] = ")", ["["] = "]", ["{"] = "}", ['"'] = '"', ["'"] = "'", ["`"] = "`" }
-  if after ~= "" and pair[before] == after then return "<BS><Del>" end -- delete empty pair
-  return "<BS>"
-end, { expr = true })
-
--- Auto-close XML-like tags so <CR> can expand them (only in tag-y filetypes)
-local tag_fts = { html = true, xhtml = true, xml = true, xsd = true, svg = true, xslt = true }
-local void_el = {
-  area = true, base = true, br = true, col = true, embed = true, hr = true, img = true,
-  input = true, link = true, meta = true, param = true, source = true, track = true, wbr = true,
-}
-keymap("i", ">", function()
-  if not tag_fts[vim.bo.filetype] then return ">" end
-  local col = vim.fn.col(".")
-  local before = vim.fn.getline("."):sub(1, col - 1) .. ">"
-  local tag = before:match("<([%a_][%w%-:%.]*)[^<>]*>$")
-  if not tag or before:match("/>$") then return ">" end
-  if (vim.bo.filetype == "html" or vim.bo.filetype == "xhtml") and void_el[tag:lower()] then
-    return ">"
-  end
-  local closer = "</" .. tag .. ">"
-  return ">" .. closer .. string.rep("<Left>", #closer)
-end, { expr = true })
-
-local cr_expand = { ["("] = ")", ["["] = "]", ["{"] = "}", [">"] = "<" }
-keymap("i", "<CR>", function()
-  if vim.fn.pumvisible() == 1 and vim.fn.complete_info({ "selected" }).selected ~= -1 then
-    return "<C-y>" -- confirm a selected completion item
-  end
-  local before, after = cursor_chars()
-  if after ~= "" and cr_expand[before] == after then return "<CR><Esc>O" end
-  return "<CR>"
-end, { expr = true })
+-- Auto-pairs, tag auto-close, smart <CR>
+require("autopairs")
 
 -- Plugins
 local gh = function(url) return "https://github.com/" .. url end
@@ -145,7 +79,6 @@ local plugs = {
   },
   { src = gh("nvim-tree/nvim-web-devicons") },
   { src = gh("nvim-treesitter/nvim-treesitter") },
-  { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
   { src = gh("nvim-treesitter/nvim-treesitter-textobjects") },
   {
     src = gh("kevalin/mermaid.nvim"),
@@ -172,8 +105,8 @@ local plugs = {
     opts = {
       winopts = { height = 0.40, width = 1.0, row = 1.0, col = 0.5, border = 1 },
       fzf_opts = {
-        ["--layout"]  = "reverse",
-        ["--info"]    = "inline",
+        ["--layout"] = "reverse",
+        ["--info"] = "inline",
         ["--history"] = vim.fn.stdpath("data") .. "/fzf-history",
       },
       preview = { default = "bat" },
@@ -186,14 +119,33 @@ for _, plug in ipairs(plugs) do
   if plug.req then require(plug.req).setup(plug.opts or {}) end
 end
 
+-- Mason tools beyond LSP servers (mason-lspconfig's ensure_installed only covers those)
+local mason_registry = require("mason-registry")
+mason_registry.refresh(function()
+  for _, name in ipairs({ "stylua" }) do
+    local pkg = mason_registry.get_package(name)
+    if not pkg:is_installed() then pkg:install() end
+  end
+end)
+
 -- Native undotree (bundled optional plugin)
 vim.cmd.packadd("nvim.undotree")
 keymap("n", "<leader>u", "<cmd>Undotree<CR>", { desc = "Toggle undotree" })
 
 -- Treesitter (main branch needs explicit install + per-buffer start)
 require("nvim-treesitter").install({
-  "javascript", "typescript", "tsx", "jsdoc", "cpp", "lua",
-  "html", "css", "json", "xml", "markdown", "mermaid",
+  "javascript",
+  "typescript",
+  "tsx",
+  "jsdoc",
+  "cpp",
+  "lua",
+  "html",
+  "css",
+  "json",
+  "xml",
+  "markdown",
+  "mermaid",
 })
 vim.api.nvim_create_autocmd("FileType", {
   callback = function(args) pcall(vim.treesitter.start, args.buf) end,
@@ -203,8 +155,10 @@ vim.api.nvim_create_autocmd("FileType", {
 local ts_select = require("nvim-treesitter-textobjects.select").select_textobject
 local ts_move = require("nvim-treesitter-textobjects.repeatable_move")
 for lhs, q in pairs({
-  af = "@function.outer", ["if"] = "@function.inner",
-  ac = "@class.outer", ic = "@class.inner",
+  af = "@function.outer",
+  ["if"] = "@function.inner",
+  ac = "@class.outer",
+  ic = "@class.inner",
 }) do
   keymap({ "x", "o" }, lhs, function() ts_select(q, "textobjects") end)
 end
@@ -221,16 +175,34 @@ local fzf = require("fzf-lua")
 keymap("n", "<leader>p", fzf.files, { desc = "FZF: Files" })
 keymap("n", "<leader>f", fzf.live_grep, { desc = "FZF: Live grep" })
 keymap("n", "<leader>b", fzf.buffers, { desc = "FZF: Buffers" })
-keymap("n", "<leader>g", function() fzf.live_grep({ search = vim.fn.expand("<cword>") }) end,
-  { desc = "FZF: Grep <cword>" })
+keymap(
+  "n",
+  "<leader>g",
+  function() fzf.live_grep({ search = vim.fn.expand("<cword>") }) end,
+  { desc = "FZF: Grep <cword>" }
+)
 
 -- Colorscheme + transparent backgrounds
 vim.cmd.colorscheme("noirblaze")
 for _, g in ipairs({
-  "Normal", "NormalNC", "SignColumn", "MsgArea", "LineNr", "CursorLineNr",
-  "NonText", "FoldColumn", "StatusLine", "StatusLineNC", "TabLine",
-  "TabLineFill", "TabLineSel", "VertSplit", "EndOfBuffer", "PMenu",
-  "PMenuThumb", "WildMenu",
+  "Normal",
+  "NormalNC",
+  "SignColumn",
+  "MsgArea",
+  "LineNr",
+  "CursorLineNr",
+  "NonText",
+  "FoldColumn",
+  "StatusLine",
+  "StatusLineNC",
+  "TabLine",
+  "TabLineFill",
+  "TabLineSel",
+  "VertSplit",
+  "EndOfBuffer",
+  "PMenu",
+  "PMenuThumb",
+  "WildMenu",
 }) do
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
@@ -248,10 +220,10 @@ local data = vim.fn.stdpath("data")
 for _, dir in ipairs({ "/undo", "/swap", "/backup", "/workspace/sessions" }) do
   vim.fn.mkdir(data .. dir, "p")
 end
-vim.opt.undofile = true
-vim.opt.undodir = data .. "/undo//"
-vim.opt.directory = data .. "/swap//"
-vim.opt.backupdir = data .. "/backup//"
+vim.o.undofile = true
+vim.o.undodir = data .. "/undo//"
+vim.o.directory = data .. "/swap//"
+vim.o.backupdir = data .. "/backup//"
 
 -- vim-workspace
 vim.g.workspace_session_directory = data .. "/workspace/sessions"
@@ -260,7 +232,7 @@ vim.g.workspace_autocreate = 1
 vim.g.workspace_autosave = 0
 
 -- Rainbow parentheses
-vim.api.nvim_set_var("rainbow#pairs", { { "(", ")" }, { "[", "]" }, { "{", "}" } })
+vim.g["rainbow#pairs"] = { { "(", ")" }, { "[", "]" }, { "{", "}" } }
 
 -- LSP servers
 local lsps = {
@@ -291,7 +263,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.lsp.completion.enable(true, args.data.client_id, args.buf, { autotrigger = true })
     end
     if client:supports_method("textDocument/signatureHelp") then
-      local chars = (client.server_capabilities.signatureHelpProvider or {}).triggerCharacters or { "(", "," }
+      local chars = (client.server_capabilities.signatureHelpProvider or {}).triggerCharacters
+        or { "(", "," }
       vim.api.nvim_create_autocmd("InsertCharPre", {
         buffer = args.buf,
         callback = function()
@@ -301,9 +274,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
           local win = vim.b[args.buf].lsp_floating_preview
           local refresh_on_ws = char:match("%s") and win and vim.api.nvim_win_is_valid(win)
           if vim.tbl_contains(chars, char) or refresh_on_ws then
-            vim.schedule(function()
-              vim.lsp.buf.signature_help({ focus = false, silent = true })
-            end)
+            vim.schedule(
+              function() vim.lsp.buf.signature_help({ focus = false, silent = true }) end
+            )
           end
         end,
       })
@@ -311,77 +284,20 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
--- Drop noisy diagnostics: unused (tag 1) and TS "cannot find name" (2304/2552)
-local function drop_noisy_diags(diags, client_id)
-  local name = (vim.lsp.get_client_by_id(client_id) or {}).name
-  local is_ts = name == "tsgo" or name == "ts_ls"
-  return vim.tbl_filter(function(d)
-    if d.tags and vim.tbl_contains(d.tags, 1) then return false end
-    if is_ts and (d.code == 2304 or d.code == 2552) then return false end
-    return true
-  end, diags)
-end
-
-local orig_publish = vim.lsp.handlers["textDocument/publishDiagnostics"]
----@diagnostic disable-next-line: duplicate-set-field
-vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
-  if result and result.diagnostics then
-    result.diagnostics = drop_noisy_diags(result.diagnostics, ctx.client_id)
-  end
-  orig_publish(err, result, ctx, config)
-end
-
--- tsgo delivers diagnostics via pull (textDocument/diagnostic), not publish
-local orig_pull = vim.lsp.handlers["textDocument/diagnostic"]
----@diagnostic disable-next-line: duplicate-set-field
-vim.lsp.handlers["textDocument/diagnostic"] = function(err, result, ctx, config)
-  if result and result.items then
-    result.items = drop_noisy_diags(result.items, ctx.client_id)
-  end
-  return orig_pull(err, result, ctx, config)
-end
+-- Drop noisy diagnostics (unused vars, TS "cannot find name")
+require("diagnostics-filter")
 
 -- Autocmds
 local au = vim.api.nvim_create_autocmd
 
 -- Offer to install JS deps when eslint attaches but node_modules is missing
-local eslint_prompted = {} -- per-root guard, so it doesn't nag repeatedly
-local function pkg_manager(root)
-  if vim.uv.fs_stat(root .. "/pnpm-lock.yaml") then return { "pnpm", "install" } end
-  if vim.uv.fs_stat(root .. "/yarn.lock") then return { "yarn", "install" } end
-  if vim.uv.fs_stat(root .. "/bun.lockb") or vim.uv.fs_stat(root .. "/bun.lock") then
-    return { "bun", "install" }
-  end
-  return { "npm", "install" }
-end
-au("LspAttach", {
-  callback = function(args)
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or client.name ~= "eslint" then return end
-    local root = client.root_dir
-    if not root or vim.uv.fs_stat(root .. "/node_modules") or eslint_prompted[root] then return end
-    eslint_prompted[root] = true
-    local cmd = pkg_manager(root)
-    vim.schedule(function()
-      if vim.fn.confirm(("eslint: node_modules missing in\n%s\nRun `%s`?"):format(root, table.concat(cmd, " ")), "&Yes\n&No", 2) ~= 1 then
-        return
-      end
-      vim.notify("eslint: installing deps (" .. table.concat(cmd, " ") .. ")…", vim.log.levels.INFO)
-      vim.system(cmd, { cwd = root }, function(out)
-        vim.schedule(function()
-          if out.code == 0 then
-            vim.notify("eslint: deps installed, restarting.", vim.log.levels.INFO)
-            pcall(vim.cmd, "LspRestart eslint")
-          else
-            vim.notify("eslint: install failed\n" .. (out.stderr or ""), vim.log.levels.ERROR)
-          end
-        end)
-      end)
-    end)
+require("eslint-deps")
+
+au("VimResized", {
+  callback = function()
+    vim.schedule(function() vim.cmd("wincmd =") end)
   end,
 })
-
-au("VimResized", { callback = function() vim.schedule(function() vim.cmd("wincmd =") end) end })
 
 -- The runtime XML indenter (XmlIndentGet(v:lnum,1)) gates on legacy :syntax via
 -- synID() to skip tags inside comments/strings. We highlight with Treesitter and
@@ -402,8 +318,18 @@ au("VimEnter", { callback = function() vim.cmd("RainbowParentheses") end })
 au("FileType", {
   pattern = "mermaid",
   callback = function(args)
-    keymap("n", "<leader>mp", "<cmd>MermaidPreview<CR>", { buffer = args.buf, desc = "Mermaid preview" })
-    keymap("n", "<leader>mf", "<cmd>MermaidFormat<CR>", { buffer = args.buf, desc = "Mermaid format" })
+    keymap(
+      "n",
+      "<leader>mp",
+      "<cmd>MermaidPreview<CR>",
+      { buffer = args.buf, desc = "Mermaid preview" }
+    )
+    keymap(
+      "n",
+      "<leader>mf",
+      "<cmd>MermaidFormat<CR>",
+      { buffer = args.buf, desc = "Mermaid format" }
+    )
   end,
 })
 au("FileType", {
@@ -424,25 +350,29 @@ au("FileType", {
 vim.api.nvim_create_augroup("nvim.progress", { clear = true })
 
 -- Markdown preview
-vim.g.mkdp_theme      = "dark"
+vim.g.mkdp_theme = "dark"
 vim.g.mkdp_auto_start = 0
-vim.g.mkdp_port       = "8890"
-vim.g.mkdp_browser    = vim.fn.executable("google-chrome") == 1 and "google-chrome" or "chromium"
-vim.g.mkdp_open_ip    = "127.0.0.1"
+vim.g.mkdp_port = "8890"
+vim.g.mkdp_browser = vim.fn.executable("google-chrome") == 1 and "google-chrome" or "chromium"
+vim.g.mkdp_open_ip = "127.0.0.1"
 
 -- :PackClean / :PackUpdate
 vim.api.nvim_create_user_command("PackClean", function()
-  local inactive = vim.tbl_map(function(p) return p.spec.name end,
-    vim.tbl_filter(function(p) return not p.active end, vim.pack.get()))
+  local inactive = vim.tbl_map(
+    function(p) return p.spec.name end,
+    vim.tbl_filter(function(p) return not p.active end, vim.pack.get())
+  )
   if #inactive == 0 then return vim.notify("No unused plugins.") end
   if vim.fn.confirm("Remove " .. #inactive .. " unused plugins?", "&Yes\n&No", 2) == 1 then
     vim.pack.del(inactive)
   end
 end, { desc = "Remove unused plugins" })
 
-vim.api.nvim_create_user_command("PackUpdate", function(opts)
-  vim.pack.update(opts.fargs, { force = opts.bang })
-end, { nargs = "*", bang = true, desc = "Update plugins" })
+vim.api.nvim_create_user_command(
+  "PackUpdate",
+  function(opts) vim.pack.update(opts.fargs, { force = opts.bang }) end,
+  { nargs = "*", bang = true, desc = "Update plugins" }
+)
 
 -- Outline
-keymap('n', "<leader>o", "<cmd>Outline<CR>", { desc = "Toggle outline" })
+keymap("n", "<leader>o", "<cmd>Outline<CR>", { desc = "Toggle outline" })
