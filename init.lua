@@ -9,6 +9,7 @@ vim.opt.splitbelow = true
 vim.opt.splitright = true
 vim.opt.laststatus = 3 -- single global statusline; windows divided by WinSeparator
 vim.opt.completeopt = { "menu", "menuone", "noinsert", "popup", "fuzzy" }
+vim.o.cursorline = true
 vim.o.winborder = "rounded"
 vim.o.mouse = ""
 vim.g.mapleader = " "
@@ -139,7 +140,7 @@ local plugs = {
     src = gh("mason-org/mason-lspconfig.nvim"),
     req = "mason-lspconfig",
     opts = {
-      ensure_installed = { "ts_ls", "eslint", "vimls", "lua_ls", "lemminx" },
+      ensure_installed = { "tsgo", "eslint", "vimls", "lua_ls", "lemminx" },
     },
   },
   { src = gh("nvim-tree/nvim-web-devicons") },
@@ -263,7 +264,7 @@ vim.api.nvim_set_var("rainbow#pairs", { { "(", ")" }, { "[", "]" }, { "{", "}" }
 
 -- LSP servers
 local lsps = {
-  ts_ls = {},
+  tsgo = {},
   eslint = {},
   vimls = {},
   lemminx = {},
@@ -311,18 +312,33 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 -- Drop noisy diagnostics: unused (tag 1) and TS "cannot find name" (2304/2552)
+local function drop_noisy_diags(diags, client_id)
+  local name = (vim.lsp.get_client_by_id(client_id) or {}).name
+  local is_ts = name == "tsgo" or name == "ts_ls"
+  return vim.tbl_filter(function(d)
+    if d.tags and vim.tbl_contains(d.tags, 1) then return false end
+    if is_ts and (d.code == 2304 or d.code == 2552) then return false end
+    return true
+  end, diags)
+end
+
 local orig_publish = vim.lsp.handlers["textDocument/publishDiagnostics"]
 ---@diagnostic disable-next-line: duplicate-set-field
 vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
   if result and result.diagnostics then
-    local is_ts = (vim.lsp.get_client_by_id(ctx.client_id) or {}).name == "ts_ls"
-    result.diagnostics = vim.tbl_filter(function(d)
-      if d.tags and vim.tbl_contains(d.tags, 1) then return false end
-      if is_ts and (d.code == 2304 or d.code == 2552) then return false end
-      return true
-    end, result.diagnostics)
+    result.diagnostics = drop_noisy_diags(result.diagnostics, ctx.client_id)
   end
   orig_publish(err, result, ctx, config)
+end
+
+-- tsgo delivers diagnostics via pull (textDocument/diagnostic), not publish
+local orig_pull = vim.lsp.handlers["textDocument/diagnostic"]
+---@diagnostic disable-next-line: duplicate-set-field
+vim.lsp.handlers["textDocument/diagnostic"] = function(err, result, ctx, config)
+  if result and result.items then
+    result.items = drop_noisy_diags(result.items, ctx.client_id)
+  end
+  return orig_pull(err, result, ctx, config)
 end
 
 -- Autocmds
@@ -400,7 +416,7 @@ au("FileType", {
       vim.api.nvim_set_current_win(qf_win)
     end, { buffer = true, silent = true })
 
-    keymap("n", "<CR>", "<CR>:cclose<CR>")
+    keymap("n", "<CR>", "<CR>:cclose<CR>", { buffer = true, silent = true })
   end,
 })
 
