@@ -293,6 +293,21 @@ local au = vim.api.nvim_create_autocmd
 -- Offer to install JS deps when eslint attaches but node_modules is missing
 require("eslint-deps")
 
+-- eslint: fix all auto-fixable lint issues on save (the eslint LSP exposes autofix as formatting)
+au("LspAttach", {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= "eslint" then return end
+    au("BufWritePre", {
+      group = vim.api.nvim_create_augroup("eslint-fix-" .. args.buf, { clear = true }),
+      buffer = args.buf,
+      callback = function()
+        vim.lsp.buf.format({ bufnr = args.buf, name = "eslint", timeout_ms = 3000 })
+      end,
+    })
+  end,
+})
+
 au("VimResized", {
   callback = function()
     vim.schedule(function() vim.cmd("wincmd =") end)
