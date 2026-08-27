@@ -132,8 +132,10 @@ end)
 vim.cmd.packadd("nvim.undotree")
 keymap("n", "<leader>u", "<cmd>Undotree<CR>", { desc = "Toggle undotree" })
 
--- Treesitter (main branch needs explicit install + per-buffer start)
-require("nvim-treesitter").install({
+-- Treesitter (main branch needs explicit install + per-buffer start).
+-- Compiling parsers needs the tree-sitter CLI; without it every install fails
+-- silently, so bail out loudly instead.
+local ts_langs = {
   "javascript",
   "typescript",
   "tsx",
@@ -146,7 +148,16 @@ require("nvim-treesitter").install({
   "xml",
   "markdown",
   "mermaid",
-})
+}
+if vim.fn.executable("tree-sitter") == 1 then
+  require("nvim-treesitter").install(ts_langs, { summary = true })
+else
+  vim.notify(
+    "nvim-treesitter: `tree-sitter` CLI not in PATH, parsers cannot be compiled.\n"
+      .. "Install it with your package manager (Arch: pacman -S tree-sitter-cli), not npm.",
+    vim.log.levels.WARN
+  )
+end
 vim.api.nvim_create_autocmd("FileType", {
   callback = function(args) pcall(vim.treesitter.start, args.buf) end,
 })
