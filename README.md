@@ -22,6 +22,19 @@ drives the desktop and two hand-edited copies do not stay in step.
 > the plugin — you edit the theme in one place and neovim keeps drawing the
 > other. If a `colors/noirblaze.lua` ever reappears here, that is a bug.
 
+## Sessions (vim-workspace)
+
+Sessions are per-directory and auto-created, but only for a **bare** launch:
+
+| Launch | Session |
+|---|---|
+| `nvim` in a project dir | restored, or created on first visit |
+| `nvim foo.ts` (yazi, git, an explicit file arg) | skipped — you get just that file, no extra tabs or buffers |
+| `NVIM_NO_WORKSPACE=1 nvim` | skipped; vim-workspace isn't loaded at all |
+
+Skipping never touches the session on disk, so the next bare `nvim` in that directory
+restores it exactly as it was.
+
 ## Requirements
 
 - Neovim ≥ 0.12 — required by nvim-treesitter's `main` branch
@@ -64,7 +77,7 @@ All servers are installed automatically by mason on first launch — no manual i
 
 | Server | Purpose |
 |---|---|
-| `tsgo` | TypeScript / JavaScript (TypeScript 7 native LSP) |
+| `tsc` | TypeScript / JavaScript (TypeScript 7 native LSP) |
 | `eslint` | Linting |
 | `lua_ls` | Lua |
 | `vimls` | Vimscript |

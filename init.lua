@@ -75,7 +75,7 @@ local plugs = {
     src = gh("mason-org/mason-lspconfig.nvim"),
     req = "mason-lspconfig",
     opts = {
-      ensure_installed = { "tsgo", "eslint", "vimls", "lua_ls", "lemminx" },
+      ensure_installed = { "tsc", "eslint", "vimls", "lua_ls", "lemminx" },
     },
   },
   { src = gh("nvim-tree/nvim-web-devicons") },
@@ -114,6 +114,13 @@ local plugs = {
     },
   },
 }
+
+-- `NVIM_NO_WORKSPACE=1 nvim` starts with no session at all: claim vim-workspace with a
+-- no-op loader first, so vim.pack still installs/updates it but never sources it (vim.pack
+-- keeps the first spec seen for a plugin and skips the duplicate below).
+if os.getenv("NVIM_NO_WORKSPACE") then
+  vim.pack.add({ { src = gh("thaerkh/vim-workspace") } }, { load = function() end })
+end
 
 vim.pack.add(plugs)
 for _, plug in ipairs(plugs) do
@@ -242,13 +249,16 @@ vim.g.workspace_session_directory = data .. "/workspace/sessions"
 vim.g.workspace_undodir = data .. "/undo//"
 vim.g.workspace_autocreate = 1
 vim.g.workspace_autosave = 0
+-- Launching on a file (yazi, git, `nvim foo.ts`) shouldn't drag in the directory's whole
+-- session; bare `nvim` in a project still restores/creates one.
+vim.g.workspace_session_disable_on_args = 1
 
 -- Rainbow parentheses
 vim.g["rainbow#pairs"] = { { "(", ")" }, { "[", "]" }, { "{", "}" } }
 
 -- LSP servers
 local lsps = {
-  tsgo = {},
+  tsc = {},
   eslint = {},
   vimls = {},
   lemminx = {},
