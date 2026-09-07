@@ -64,14 +64,6 @@ require("autopairs")
 -- Plugins
 local gh = function(url) return "https://github.com/" .. url end
 local plugs = {
-  -- The colourscheme. It lives in its own repo because the same theme also
-  -- drives the desktop (cachyos-hyprland-dots consumes it as a submodule), and
-  -- keeping two hand-edited copies in step is what that repo was built to stop.
-  --
-  -- colors/noirblaze.lua USED TO BE HERE and has been deleted deliberately: the
-  -- config directory precedes packages on runtimepath, so a leftover local copy
-  -- silently shadows the plugin and you spend an afternoon editing a theme that
-  -- is not the one being drawn.
   { src = gh("torbenkopplin/noirblaze") },
   { src = gh("thaerkh/vim-workspace") },
   { src = gh("tpope/vim-fugitive") },
