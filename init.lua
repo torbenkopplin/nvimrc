@@ -194,6 +194,8 @@ local fzf = require("fzf-lua")
 keymap("n", "<leader>p", fzf.files, { desc = "FZF: Files" })
 keymap("n", "<leader>f", fzf.live_grep, { desc = "FZF: Live grep" })
 keymap("n", "<leader>b", fzf.buffers, { desc = "FZF: Buffers" })
+keymap("n", "<leader>m", fzf.marks, { desc = "FZF: Buffers" })
+keymap("n", "<leader>j", fzf.jumps, { desc = "FZF: Buffers" })
 keymap(
   "n",
   "<leader>g",
