@@ -113,6 +113,15 @@ local plugs = {
       preview = { default = "bat" },
     },
   },
+  {
+    -- CloudBackend PaaS. Logins are profiles: :CloudBackend login {profile} {user} {tenant},
+    -- :CloudBackend profile to switch
+    src = "ssh://git@forgejo.xcerion.com:2222/torben.kopplin/cloudbackend.nvim.git",
+    req = "cloudbackend",
+    opts = {
+      password_cmd = { "secret-tool", "lookup", "service", "cloudbackend", "user", "torben" },
+    },
+  },
 }
 
 -- `NVIM_NO_WORKSPACE=1 nvim` starts with no session at all: claim vim-workspace with a
