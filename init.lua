@@ -326,6 +326,22 @@ local au = vim.api.nvim_create_autocmd
 -- Offer to install JS deps when eslint attaches but node_modules is missing
 require("eslint-deps")
 
+-- pad parens in if/switch/for: if(a === b) { -> if( a === b ) {
+local pad_parens_pat = [[\v<(if|switch|for)(\s*)\(\s*(.{-})\s*\)\s*\{/\1\2( \3 ) {/ge]]
+
+local function pad_parens(bufnr, line1, line2)
+  vim.api.nvim_buf_call(bufnr, function()
+    local view = vim.fn.winsaveview()
+    vim.cmd(string.format("silent keepjumps keeppatterns %s,%ss/%s",
+      line1 or 1, line2 or "$", pad_parens_pat))
+    vim.fn.winrestview(view)
+  end)
+end
+
+vim.api.nvim_create_user_command("PadParens", function(opts)
+  pad_parens(0, opts.line1, opts.line2)
+end, { range = "%" })
+
 -- eslint: fix all auto-fixable lint issues on save (the eslint LSP exposes autofix as formatting)
 au("LspAttach", {
   callback = function(args)
@@ -335,6 +351,7 @@ au("LspAttach", {
       group = vim.api.nvim_create_augroup("eslint-fix-" .. args.buf, { clear = true }),
       buffer = args.buf,
       callback = function()
+        -- pad_parens(args.buf)
         vim.lsp.buf.format({ bufnr = args.buf, name = "eslint", timeout_ms = 3000 })
       end,
     })
