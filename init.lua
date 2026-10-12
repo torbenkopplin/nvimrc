@@ -205,6 +205,7 @@ keymap("n", "<leader>f", fzf.live_grep, { desc = "FZF: Live grep" })
 keymap("n", "<leader>b", fzf.buffers, { desc = "FZF: Buffers" })
 keymap("n", "<leader>m", fzf.marks, { desc = "FZF: Buffers" })
 keymap("n", "<leader>j", fzf.jumps, { desc = "FZF: Buffers" })
+keymap("n", "<leader>c", "<cmd>CloudBackend find<cr>", { desc = "FZF: CloudBackend PaaS files" })
 keymap(
   "n",
   "<leader>g",
@@ -325,6 +326,9 @@ local au = vim.api.nvim_create_autocmd
 
 -- Offer to install JS deps when eslint attaches but node_modules is missing
 require("eslint-deps")
+
+-- Forgejo pull requests with tea + fzf-lua (:Pulls, :PullCreate)
+require("tea")
 
 -- pad parens in if/switch/for: if(a === b) { -> if( a === b ) {
 local pad_parens_pat = [[\v<(if|switch|for)(\s*)\(\s*(.{-})\s*\)\s*\{/\1\2( \3 ) {/ge]]
