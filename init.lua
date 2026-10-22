@@ -67,6 +67,7 @@ local plugs = {
   { src = gh("torbenkopplin/noirblaze") },
   { src = gh("thaerkh/vim-workspace") },
   { src = gh("tpope/vim-fugitive") },
+  { src = gh("sindrets/diffview.nvim") },
   { src = gh("junegunn/rainbow_parentheses.vim") },
   { src = gh("iamcco/markdown-preview.nvim") },
   { src = gh("neovim/nvim-lspconfig") },
