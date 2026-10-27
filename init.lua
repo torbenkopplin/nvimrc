@@ -63,6 +63,20 @@ require("autopairs")
 
 -- Plugins
 local gh = function(url) return "https://github.com/" .. url end
+
+-- API token of a tea login, so Forgejo credentials live only in tea's config
+local function tea_token(login)
+  local f = io.open(vim.fn.expand("~/.config/tea/config.yml"))
+  if not f then return nil end
+  local name, token
+  for line in f:lines() do
+    name = line:match("^%s*- name: (%S+)") or name
+    token = name == login and line:match("^%s+token: (%S+)")
+    if token then break end
+  end
+  f:close()
+  return token or nil
+end
 local plugs = {
   { src = gh("torbenkopplin/noirblaze") },
   { src = gh("thaerkh/vim-workspace") },
@@ -112,6 +126,19 @@ local plugs = {
         ["--history"] = vim.fn.stdpath("data") .. "/fzf-history",
       },
       preview = { default = "bat" },
+    },
+  },
+  {
+    -- PR review (:Atlas review). Forgejo support is still upstream draft PR #67,
+    -- so this tracks its branch; drop `version` once it lands in a release.
+    src = gh("emrearmagan/atlas.nvim"),
+    version = "feat/gitea-forgejo",
+    req = "atlas",
+    opts = {
+      ui = { picker = "fzf-lua" },
+      providers = {
+        forgejo = { base_url = "https://forgejo.xcerion.com", token = tea_token("forgejo") },
+      },
     },
   },
   {
