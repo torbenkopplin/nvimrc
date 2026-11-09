@@ -55,6 +55,81 @@ local function review(n, base, cwd)
   end)
 end
 
+-- The stage: one dashboard worktree whose xios/ is a worktree of the xios submodule,
+-- served beside the main checkout. Its server runs without sudo, so it falls back from
+-- 443 to 8443, and it outlives nvim until :Serve stop. Set up once, from the dashboard:
+--   git worktree add --detach .claude/worktrees/review origin/master
+--   git -C xios worktree add --detach $PWD/.claude/worktrees/review/xios \
+--     (git -C .claude/worktrees/review rev-parse HEAD:xios)
+--   ln -s /run/media/veracrypt1/inetpub/xios-dev/tools .claude/worktrees/review/tools
+--   ln -s ../../../node_modules .claude/worktrees/review/node_modules
+local stage = "/run/media/veracrypt1/inetpub/dashboard/.claude/worktrees/review"
+local stage_url = "https://xios.com:8443/"
+local stage_pid = vim.fn.stdpath("state") .. "/tea-serve.pid"
+local staged = {} -- what each half of the stage shows, by dir: "PR #460" or a rev
+
+-- the server's pid, if it's still the one serving the stage
+local function serving()
+  local pid = vim.fn.filereadable(stage_pid) == 1 and tonumber(vim.fn.readfile(stage_pid)[1] or "")
+  return pid and vim.uv.fs_readlink("/proc/" .. pid .. "/cwd") == stage and pid or nil
+end
+
+local function serve_status()
+  local function head(dir)
+    local log = vim.trim(vim.system({ "git", "log", "-1", "--format=%h %s" }, { cwd = dir, text = true }):wait().stdout)
+    return (staged[dir] and staged[dir] .. " · " or "") .. log
+  end
+  vim.notify(("%s %s\n  dashboard  %s\n  xios       %s"):format(serving() and "serving" or "stopped", stage_url,
+    head(stage), head(stage .. "/xios")), vim.log.levels.INFO, { title = "tea" })
+end
+
+local function serve_start()
+  if serving() then return serve_status() end
+  local log = vim.fn.stdpath("state") .. "/tea-serve.log"
+  local job = vim.system({ "sh", "-c", 'exec node tools/server.js -q >"$1" 2>&1', "sh", log }, { cwd = stage, detach = true })
+  vim.fn.writefile({ tostring(job.pid) }, stage_pid)
+  vim.defer_fn(function()
+    serve_status()
+    -- Chromium is the testing browser; the default one (Brave) is personal
+    vim.system({ "chromium", stage_url }, { detach = true, stdout = false, stderr = false })
+  end, 1000)
+end
+
+local function serve_stop()
+  local pid = serving()
+  if not pid then return vim.notify("the stage isn't served", vim.log.levels.INFO, { title = "tea" }) end
+  vim.uv.kill(pid, "sigterm")
+  os.remove(stage_pid)
+  vim.notify("stopped serving " .. stage_url, vim.log.levels.INFO, { title = "tea" })
+end
+
+-- put a PR number or any rev of the repo at cwd on the stage; a dashboard rev brings
+-- the xios commit it points at, a xios rev leaves the dashboard where it is
+local function serve(target, cwd)
+  if vim.fn.isdirectory(stage .. "/xios/.git") == 0 and vim.fn.filereadable(stage .. "/xios/.git") == 0 then
+    return vim.notify("no stage at " .. stage .. "; see the setup in tea.lua", vim.log.levels.ERROR, { title = "tea" })
+  end
+  local origin = vim.system({ "git", "remote", "get-url", "origin" }, { cwd = cwd, text = true }):wait().stdout or ""
+  local dir = origin:find("xios%-core") and stage .. "/xios" or origin:find("/dashboard") and stage
+  if not dir then return vim.notify("only the dashboard and xios-core can be served", vim.log.levels.WARN, { title = "tea" }) end
+  local pr = target:match("^%d+$")
+  local rev = pr and "origin/pr/" .. pr or target
+  local fetch = pr and { "git", "fetch", "origin", "+refs/pull/" .. pr .. "/head:refs/remotes/origin/pr/" .. pr }
+    or { "git", "fetch", "origin" }
+  run(fetch, dir, function()
+    run({ "git", "checkout", "-q", "--detach", rev }, dir, function()
+      staged[dir] = pr and "PR #" .. pr or rev
+      if dir ~= stage then return serve_start() end
+      -- the xios commit may be on no branch this clone has fetched yet
+      run({ "git", "rev-parse", "HEAD:xios" }, stage, function(sha)
+        staged[stage .. "/xios"] = nil
+        run({ "sh", "-c", 'git cat-file -e "$1^{commit}" 2>/dev/null || git fetch -q origin; git checkout -q --detach "$1"',
+          "sh", vim.trim(sha) }, stage .. "/xios", serve_start)
+      end)
+    end)
+  end)
+end
+
 -- a markdown scratch window: :w hands its text to submit(text, close), :q drops it
 local function compose(name, submit)
   local old = vim.fn.bufnr(name)
@@ -113,7 +188,7 @@ local function render(r)
     or pr.state == "closed" and { "closed", "DiagnosticError" }
     or { pr.draft and "draft" or "open", "DiagnosticOk" }
   line("# " .. pr.title)
-  line({ "c checkout  d diff  o browser  y url  a approve  r request changes  C comment  m merge  R reload  q close", "Comment" })
+  line({ "c checkout  d diff  s serve  o browser  y url  a approve  r request changes  C comment  m merge  R reload  q close", "Comment" })
   line("")
   local wants = pr.merged and "merged" or pr.state == "closed" and "wanted to merge" or "wants to merge"
   line(("#%d · "):format(pr.number), state, (" · %s %s "):format(who(pr.user), wants),
@@ -251,6 +326,7 @@ local function overview(n, cwd)
       map("R", reload, "reload")
       map("c", function() checkout(n, cwd) end, "checkout")
       map("d", function() review(n, pr.base.ref, cwd) end, "review diff")
+      map("s", function() serve(n, cwd) end, "serve on the stage")
       map("o", function() vim.ui.open(pr.html_url) end, "open in browser")
       map("y", function()
         vim.fn.setreg("+", pr.html_url)
@@ -338,6 +414,10 @@ local function pulls(state)
           local n = index(sel)
           if n then review(n, sel[1]:match("^%d+\t[^\t]*\t[^\t]*\t([^\t]*)"), cwd) end
         end,
+        ["ctrl-s"] = function(sel)
+          local n = index(sel)
+          if n then serve(n, cwd) end
+        end,
       },
     })
   end)
@@ -390,6 +470,14 @@ vim.api.nvim_create_user_command("Pulls", function(o) pulls(o.args) end, {
 })
 vim.api.nvim_create_user_command("Pull", function(o) pull(o.args) end, { nargs = "?", desc = "tea: pull request overview" })
 vim.api.nvim_create_user_command("PullCreate", function(o) create(o.args) end, { nargs = "?", desc = "tea: create a pull request" })
+-- :Serve [n|rev|stop]: no argument says what the stage shows
+vim.api.nvim_create_user_command("Serve", function(o)
+  if o.args == "" then return serve_status() end
+  if o.args == "stop" then return serve_stop() end
+  local cwd = root()
+  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "tea" }) end
+  serve(o.args, cwd)
+end, { nargs = "?", complete = function() return { "stop" } end, desc = "tea: serve a PR or rev on the stage" })
 
 vim.keymap.set("n", "<leader>tp", function() pulls() end, { desc = "tea: Pull requests" })
 vim.keymap.set("n", "<leader>to", function() pull() end, { desc = "tea: Pull request of this branch" })
