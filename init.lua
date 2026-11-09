@@ -64,18 +64,10 @@ require("autopairs")
 -- Plugins
 local gh = function(url) return "https://github.com/" .. url end
 
--- API token of a tea login, so Forgejo credentials live only in tea's config
-local function tea_token(login)
-  local f = io.open(vim.fn.expand("~/.config/tea/config.yml"))
-  if not f then return nil end
-  local name, token
-  for line in f:lines() do
-    name = line:match("^%s*- name: (%S+)") or name
-    token = name == login and line:match("^%s+token: (%S+)")
-    if token then break end
-  end
-  f:close()
-  return token or nil
+-- API token of gt's (gitea-cli) login, so Forgejo credentials live only in its keyring
+local function gt_token(host)
+  local ok, out = pcall(function() return vim.system({ "gt", "auth", "token", "--host", host }, { text = true }):wait() end)
+  return ok and out.code == 0 and vim.trim(out.stdout) or nil
 end
 local plugs = {
   { src = gh("torbenkopplin/noirblaze") },
@@ -137,7 +129,7 @@ local plugs = {
     opts = {
       ui = { picker = "fzf-lua" },
       providers = {
-        forgejo = { base_url = "https://forgejo.xcerion.com", token = tea_token("forgejo") },
+        forgejo = { base_url = "https://forgejo.xcerion.com", token = gt_token("https://forgejo.xcerion.com") },
       },
     },
   },
@@ -358,8 +350,8 @@ local au = vim.api.nvim_create_autocmd
 -- Offer to install JS deps when eslint attaches but node_modules is missing
 require("eslint-deps")
 
--- Forgejo pull requests with tea + fzf-lua (:Pulls, :PullCreate)
-require("tea")
+-- Forgejo pull requests with gt (gitea-cli) + fzf-lua (:Pulls, :PullCreate)
+require("gitea")
 
 -- pad parens in if/switch/for: if(a === b) { -> if( a === b ) {
 local pad_parens_pat = [[\v<(if|switch|for)(\s*)\(\s*(.{-})\s*\)\s*\{/\1\2( \3 ) {/ge]]

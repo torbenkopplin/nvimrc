@@ -1,4 +1,4 @@
--- Forgejo/Gitea pull requests through tea, picked with fzf-lua
+-- Forgejo/Gitea pull requests through gt (gitea-cli), picked with fzf-lua
 local fzf = require("fzf-lua")
 
 local function root()
@@ -12,16 +12,16 @@ local function run(cmd, cwd, on_done)
   vim.system(cmd, { cwd = cwd, text = true }, function(out)
     vim.schedule(function()
       if out.code ~= 0 then
-        return vim.notify(vim.trim(out.stderr ~= "" and out.stderr or out.stdout), vim.log.levels.ERROR, { title = "tea" })
+        return vim.notify(vim.trim(out.stderr ~= "" and out.stderr or out.stdout), vim.log.levels.ERROR, { title = "gitea" })
       end
       if on_done then on_done(out.stdout) end
     end)
   end)
 end
 
--- GET from the Forgejo API; tea fills in {owner}/{repo} from the repo at cwd
+-- GET from the Forgejo API; gt fills in {owner}/{repo} from the repo at cwd
 local function api(path, cwd, on_done)
-  run({ "tea", "api", path }, cwd, function(stdout)
+  run({ "gt", "api", path }, cwd, function(stdout)
     on_done(vim.json.decode(stdout, { luanil = { object = true, array = true } }))
   end)
 end
@@ -41,9 +41,9 @@ end
 local function index(selected) return selected[1] and selected[1]:match("^(%d+)\t") end
 
 local function checkout(n, cwd)
-  run({ "tea", "pulls", "checkout", "--branch", n }, cwd, function()
+  run({ "gt", "pr", "checkout", n }, cwd, function()
     vim.cmd.checktime()
-    vim.notify("checked out PR #" .. n, vim.log.levels.INFO, { title = "tea" })
+    vim.notify("checked out PR #" .. n, vim.log.levels.INFO, { title = "gitea" })
   end)
 end
 
@@ -65,7 +65,7 @@ end
 --   ln -s ../../../node_modules .claude/worktrees/review/node_modules
 local stage = "/run/media/veracrypt1/inetpub/dashboard/.claude/worktrees/review"
 local stage_url = "https://xios.com:8443/"
-local stage_pid = vim.fn.stdpath("state") .. "/tea-serve.pid"
+local stage_pid = vim.fn.stdpath("state") .. "/gitea-serve.pid"
 local staged = {} -- what each half of the stage shows, by dir: "PR #460" or a rev
 
 -- the server's pid, if it's still the one serving the stage
@@ -80,12 +80,12 @@ local function serve_status()
     return (staged[dir] and staged[dir] .. " · " or "") .. log
   end
   vim.notify(("%s %s\n  dashboard  %s\n  xios       %s"):format(serving() and "serving" or "stopped", stage_url,
-    head(stage), head(stage .. "/xios")), vim.log.levels.INFO, { title = "tea" })
+    head(stage), head(stage .. "/xios")), vim.log.levels.INFO, { title = "gitea" })
 end
 
 local function serve_start()
   if serving() then return serve_status() end
-  local log = vim.fn.stdpath("state") .. "/tea-serve.log"
+  local log = vim.fn.stdpath("state") .. "/gitea-serve.log"
   local job = vim.system({ "sh", "-c", 'exec node tools/server.js -q >"$1" 2>&1', "sh", log }, { cwd = stage, detach = true })
   vim.fn.writefile({ tostring(job.pid) }, stage_pid)
   vim.defer_fn(function()
@@ -97,21 +97,21 @@ end
 
 local function serve_stop()
   local pid = serving()
-  if not pid then return vim.notify("the stage isn't served", vim.log.levels.INFO, { title = "tea" }) end
+  if not pid then return vim.notify("the stage isn't served", vim.log.levels.INFO, { title = "gitea" }) end
   vim.uv.kill(pid, "sigterm")
   os.remove(stage_pid)
-  vim.notify("stopped serving " .. stage_url, vim.log.levels.INFO, { title = "tea" })
+  vim.notify("stopped serving " .. stage_url, vim.log.levels.INFO, { title = "gitea" })
 end
 
 -- put a PR number or any rev of the repo at cwd on the stage; a dashboard rev brings
 -- the xios commit it points at, a xios rev leaves the dashboard where it is
 local function serve(target, cwd)
   if vim.fn.isdirectory(stage .. "/xios/.git") == 0 and vim.fn.filereadable(stage .. "/xios/.git") == 0 then
-    return vim.notify("no stage at " .. stage .. "; see the setup in tea.lua", vim.log.levels.ERROR, { title = "tea" })
+    return vim.notify("no stage at " .. stage .. "; see the setup in gitea.lua", vim.log.levels.ERROR, { title = "gitea" })
   end
   local origin = vim.system({ "git", "remote", "get-url", "origin" }, { cwd = cwd, text = true }):wait().stdout or ""
   local dir = origin:find("xios%-core") and stage .. "/xios" or origin:find("/dashboard") and stage
-  if not dir then return vim.notify("only the dashboard and xios-core can be served", vim.log.levels.WARN, { title = "tea" }) end
+  if not dir then return vim.notify("only the dashboard and xios-core can be served", vim.log.levels.WARN, { title = "gitea" }) end
   local pr = target:match("^%d+$")
   local rev = pr and "origin/pr/" .. pr or target
   local fetch = pr and { "git", "fetch", "origin", "+refs/pull/" .. pr .. "/head:refs/remotes/origin/pr/" .. pr }
@@ -151,7 +151,7 @@ local function compose(name, submit)
   vim.cmd.startinsert()
 end
 
-local ns = vim.api.nvim_create_namespace("tea")
+local ns = vim.api.nvim_create_namespace("gitea")
 local verdicts = {
   APPROVED = { "approved", "DiagnosticOk" },
   REQUEST_CHANGES = { "requested changes", "DiagnosticError" },
@@ -282,7 +282,7 @@ end
 
 -- :Pull [n]: the PR as a buffer, with the actions on its keys
 local function overview(n, cwd)
-  local name = ("tea://%s/pulls/%s"):format(vim.fs.basename(cwd), n)
+  local name = ("gitea://%s/pulls/%s"):format(vim.fs.basename(cwd), n)
   gather({
     pr = "/repos/{owner}/{repo}/pulls/" .. n,
     timeline = "/repos/{owner}/{repo}/issues/" .. n .. "/timeline?limit=100",
@@ -321,7 +321,7 @@ local function overview(n, cwd)
 
       local pr = r.pr
       local function reload() overview(n, cwd) end
-      local function map(lhs, fn, desc) vim.keymap.set("n", lhs, fn, { buffer = buf, desc = "tea: " .. desc }) end
+      local function map(lhs, fn, desc) vim.keymap.set("n", lhs, fn, { buffer = buf, desc = "gitea: " .. desc }) end
       map("q", function() vim.api.nvim_buf_delete(buf, { force = true }) end, "close")
       map("R", reload, "reload")
       map("c", function() checkout(n, cwd) end, "checkout")
@@ -330,40 +330,40 @@ local function overview(n, cwd)
       map("o", function() vim.ui.open(pr.html_url) end, "open in browser")
       map("y", function()
         vim.fn.setreg("+", pr.html_url)
-        vim.notify("copied " .. pr.html_url, vim.log.levels.INFO, { title = "tea" })
+        vim.notify("copied " .. pr.html_url, vim.log.levels.INFO, { title = "gitea" })
       end, "copy url")
       local function send(what, cmd)
         return function(text, close)
           run(cmd(text), cwd, function()
             close()
-            vim.notify(what .. " #" .. n, vim.log.levels.INFO, { title = "tea" })
+            vim.notify(what .. " #" .. n, vim.log.levels.INFO, { title = "gitea" })
             reload()
           end)
         end
       end
       map("C", function()
         compose(name .. "/comment", function(text, close)
-          if text == "" then return vim.notify("empty comment", vim.log.levels.WARN, { title = "tea" }) end
-          send("commented on", function() return { "tea", "comment", "--", n, text } end)(text, close)
+          if text == "" then return vim.notify("empty comment", vim.log.levels.WARN, { title = "gitea" }) end
+          send("commented on", function() return { "gt", "pr", "comment", n, "--body", text } end)(text, close)
         end)
       end, "comment")
       map("a", function()
         compose(name .. "/approve", send("approved", function(text)
-          return text == "" and { "tea", "pulls", "approve", n } or { "tea", "pulls", "approve", "--", n, text }
+          return { "gt", "pr", "review", n, "--approve", "--body", text }
         end))
       end, "approve")
       map("r", function()
         compose(name .. "/request-changes", function(text, close)
-          if text == "" then return vim.notify("say what needs to change", vim.log.levels.WARN, { title = "tea" }) end
-          send("requested changes on", function() return { "tea", "pulls", "reject", "--", n, text } end)(text, close)
+          if text == "" then return vim.notify("say what needs to change", vim.log.levels.WARN, { title = "gitea" }) end
+          send("requested changes on", function() return { "gt", "pr", "review", n, "--request-changes", "--body", text } end)(text, close)
         end)
       end, "request changes")
       map("m", function()
         local prompt = ("Merge #%s (%s into %s) with:"):format(n, pr.head.ref, pr.base.ref)
         vim.ui.select({ "merge", "rebase", "squash", "rebase-merge" }, { prompt = prompt }, function(style)
           if not style then return end
-          run({ "tea", "pulls", "merge", "--style", style, n }, cwd, function()
-            vim.notify("merged #" .. n, vim.log.levels.INFO, { title = "tea" })
+          run({ "gt", "pr", "merge", n, "--method", style }, cwd, function()
+            vim.notify("merged #" .. n, vim.log.levels.INFO, { title = "gitea" })
             reload()
           end)
         end)
@@ -375,19 +375,16 @@ end
 -- :Pulls [open|closed|all]
 local function pulls(state)
   local cwd = root()
-  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "tea" }) end
+  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "gitea" }) end
   state = (state and state ~= "") and state or "open"
-  run({ "tea", "pulls", "list", "--state", state, "--limit", "100", "--output", "tsv",
-    "--fields", "index,state,head,base,author,title,url" }, cwd, function(stdout)
+  run({ "gt", "pr", "list", "--state", state, "--limit", "100",
+    "--jq", ".[] | [.number, .state, .head, .base, .author, .title, .url] | @tsv" }, cwd, function(stdout)
     local lines = vim.split(vim.trim(stdout), "\n", { trimempty = true })
-    table.remove(lines, 1) -- header
-    -- tsv quotes fields that need it; drop the quotes so fzf shows plain text
-    lines = vim.tbl_map(function(l) return (l:gsub('"', "")) end, lines)
-    if #lines == 0 then return vim.notify("no " .. state .. " pull requests", vim.log.levels.INFO, { title = "tea" }) end
+    if #lines == 0 then return vim.notify("no " .. state .. " pull requests", vim.log.levels.INFO, { title = "gitea" }) end
     fzf.fzf_exec(lines, {
       prompt = "PRs (" .. state .. ")> ",
       cwd = cwd,
-      preview = "tea pulls {1}",
+      preview = "gt pr view {1}",
       fzf_opts = { ["--delimiter"] = "\t", ["--with-nth"] = "1..6", ["--no-multi"] = true },
       winopts = { preview = { layout = "horizontal", horizontal = "right:60%" } },
       actions = {
@@ -407,7 +404,7 @@ local function pulls(state)
           local url = sel[1] and sel[1]:match("\t(%S+)$")
           if url then
             vim.fn.setreg("+", url)
-            vim.notify("copied " .. url, vim.log.levels.INFO, { title = "tea" })
+            vim.notify("copied " .. url, vim.log.levels.INFO, { title = "gitea" })
           end
         end,
         ["ctrl-d"] = function(sel)
@@ -426,37 +423,35 @@ end
 -- :Pull with no number: the open PR of the current branch
 local function pull(n)
   local cwd = root()
-  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "tea" }) end
+  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "gitea" }) end
   if n and n ~= "" then return overview(n, cwd) end
   local head = vim.trim(vim.system({ "git", "branch", "--show-current" }, { cwd = cwd, text = true }):wait().stdout)
-  run({ "tea", "pulls", "list", "--state", "open", "--limit", "100", "--output", "tsv", "--fields", "index,head" }, cwd, function(stdout)
-    for _, l in ipairs(vim.split(stdout, "\n", { trimempty = true })) do
-      local i, h = l:gsub('"', ""):match("^(%d+)\t(.*)$")
-      if h == head then return overview(i, cwd) end
-    end
-    vim.notify("no open pull request for " .. (head ~= "" and head or "detached HEAD"), vim.log.levels.INFO, { title = "tea" })
+  run({ "gt", "pr", "list", "--head", head, "--jq", ".[0].number // empty" }, cwd, function(stdout)
+    local i = vim.trim(stdout)
+    if i ~= "" then return overview(i, cwd) end
+    vim.notify("no open pull request for " .. (head ~= "" and head or "detached HEAD"), vim.log.levels.INFO, { title = "gitea" })
   end)
 end
 
 -- :PullCreate [base]: PR from the current branch, title and body from its commits
 local function create(base)
   local cwd = root()
-  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "tea" }) end
+  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "gitea" }) end
   base = (base and base ~= "") and base or "main"
   local head = vim.trim(vim.system({ "git", "branch", "--show-current" }, { cwd = cwd, text = true }):wait().stdout)
   if head == "" or head == base then
-    return vim.notify("switch to a feature branch first (on " .. (head ~= "" and head or "detached HEAD") .. ")", vim.log.levels.WARN, { title = "tea" })
+    return vim.notify("switch to a feature branch first (on " .. (head ~= "" and head or "detached HEAD") .. ")", vim.log.levels.WARN, { title = "gitea" })
   end
   local log = vim.system({ "git", "log", "--reverse", "--format=%s%n%n%b", base .. ".." .. head }, { cwd = cwd, text = true }):wait()
   local subject = vim.trim(vim.system({ "git", "log", "-1", "--format=%s", head }, { cwd = cwd, text = true }):wait().stdout)
   vim.ui.input({ prompt = ("PR %s -> %s title: "):format(head, base), default = subject }, function(title)
     if not title or title == "" then return end
     local body = vim.trim(log.stdout or "")
-    -- tea creates the PR from what's on the remote, so push the branch first
+    -- gt pushes only a branch the remote lacks, so push new commits on it first
     run({ "git", "push", "-u", "origin", head }, cwd, function()
-      run({ "tea", "pulls", "create", "--head", head, "--base", base, "--title", title, "--description", body }, cwd, function(out)
-        local url = out:match("https?://%S+/pulls/%d+")
-        vim.notify("created " .. (url or "pull request"), vim.log.levels.INFO, { title = "tea" })
+      run({ "gt", "pr", "create", "--head", head, "--base", base, "--title", title, "--body", body, "--jq", ".url" }, cwd, function(out)
+        local url = vim.trim(out) ~= "" and vim.trim(out) or nil
+        vim.notify("created " .. (url or "pull request"), vim.log.levels.INFO, { title = "gitea" })
       end)
     end)
   end)
@@ -466,19 +461,19 @@ local states = { "open", "closed", "all" }
 vim.api.nvim_create_user_command("Pulls", function(o) pulls(o.args) end, {
   nargs = "?",
   complete = function(lead) return vim.tbl_filter(function(s) return s:find("^" .. lead) end, states) end,
-  desc = "tea: pick a pull request",
+  desc = "gitea: pick a pull request",
 })
-vim.api.nvim_create_user_command("Pull", function(o) pull(o.args) end, { nargs = "?", desc = "tea: pull request overview" })
-vim.api.nvim_create_user_command("PullCreate", function(o) create(o.args) end, { nargs = "?", desc = "tea: create a pull request" })
+vim.api.nvim_create_user_command("Pull", function(o) pull(o.args) end, { nargs = "?", desc = "gitea: pull request overview" })
+vim.api.nvim_create_user_command("PullCreate", function(o) create(o.args) end, { nargs = "?", desc = "gitea: create a pull request" })
 -- :Serve [n|rev|stop]: no argument says what the stage shows
 vim.api.nvim_create_user_command("Serve", function(o)
   if o.args == "" then return serve_status() end
   if o.args == "stop" then return serve_stop() end
   local cwd = root()
-  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "tea" }) end
+  if not cwd then return vim.notify("not in a git repository", vim.log.levels.WARN, { title = "gitea" }) end
   serve(o.args, cwd)
-end, { nargs = "?", complete = function() return { "stop" } end, desc = "tea: serve a PR or rev on the stage" })
+end, { nargs = "?", complete = function() return { "stop" } end, desc = "gitea: serve a PR or rev on the stage" })
 
-vim.keymap.set("n", "<leader>tp", function() pulls() end, { desc = "tea: Pull requests" })
-vim.keymap.set("n", "<leader>to", function() pull() end, { desc = "tea: Pull request of this branch" })
-vim.keymap.set("n", "<leader>tP", function() create() end, { desc = "tea: Create pull request" })
+vim.keymap.set("n", "<leader>tp", function() pulls() end, { desc = "gitea: Pull requests" })
+vim.keymap.set("n", "<leader>to", function() pull() end, { desc = "gitea: Pull request of this branch" })
+vim.keymap.set("n", "<leader>tP", function() create() end, { desc = "gitea: Create pull request" })
