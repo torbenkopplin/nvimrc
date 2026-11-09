@@ -90,7 +90,7 @@ local plugs = {
     src = gh("mason-org/mason-lspconfig.nvim"),
     req = "mason-lspconfig",
     opts = {
-      ensure_installed = { "tsc", "eslint", "vimls", "lua_ls", "lemminx" },
+      ensure_installed = { "tsc", "eslint", "vimls", "lua_ls", "lemminx", "basedpyright", "ruff" },
     },
   },
   { src = gh("nvim-tree/nvim-web-devicons") },
@@ -302,6 +302,9 @@ local lsps = {
   eslint = {},
   vimls = {},
   lemminx = {},
+  clangd = {}, -- system clangd (/usr/bin), not Mason
+  basedpyright = {},
+  ruff = {},
   lua_ls = {
     settings = {
       Lua = {
