@@ -233,9 +233,9 @@ keymap(
   { desc = "FZF: Grep <cword>" }
 )
 
--- Colorscheme + transparent backgrounds
-vim.cmd.colorscheme("noirblaze")
-for _, g in ipairs({
+-- Transparent backgrounds over whichever colorscheme loads, so the terminal's own
+-- background shows through.
+local transparent = {
   "Normal",
   "NormalNC",
   "SignColumn",
@@ -254,10 +254,34 @@ for _, g in ipairs({
   "PMenu",
   "PMenuThumb",
   "WildMenu",
-}) do
-  vim.api.nvim_set_hl(0, g, { bg = "none" })
+}
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function()
+    for _, g in ipairs(transparent) do
+      vim.api.nvim_set_hl(0, g, { bg = "none" })
+    end
+    vim.api.nvim_set_hl(0, "@function", { link = "Function" })
+  end,
+})
+
+-- The colorscheme of the desktop's active design, which cachyos-hyprland-dots'
+-- noct-design writes and then calls NoctDesign() in every running nvim; noirblaze
+-- when there is none, or when it names a colorscheme that is not installed.
+local design_file = (vim.env.XDG_STATE_HOME or (vim.env.HOME .. "/.local/state"))
+  .. "/noctalia/design-nvim.lua"
+function _G.NoctDesign()
+  local ok, d = pcall(dofile, design_file)
+  if not ok and vim.uv.fs_stat(design_file) then
+    vim.notify("noct-design: " .. tostring(d), vim.log.levels.WARN)
+  end
+  local name = ok and type(d) == "table" and d.colorscheme or "noirblaze"
+  if not pcall(vim.cmd.colorscheme, name) then
+    vim.notify("noct-design: no colorscheme " .. name .. ", using noirblaze", vim.log.levels.WARN)
+    vim.cmd.colorscheme("noirblaze")
+  end
+  return ""
 end
-vim.api.nvim_set_hl(0, "@function", { link = "Function" })
+NoctDesign()
 
 local function set_statusline_git_hl()
   local fg = vim.api.nvim_get_hl(0, { name = "Function", link = false }).fg
