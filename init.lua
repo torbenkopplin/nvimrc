@@ -271,8 +271,14 @@ local design_file = (vim.env.XDG_STATE_HOME or (vim.env.HOME .. "/.local/state")
   .. "/noctalia/design-nvim.lua"
 function _G.NoctDesign()
   local ok, d = pcall(dofile, design_file)
+  if not ok and vim.uv.fs_stat(design_file) then
+    vim.notify("noct-design: " .. tostring(d), vim.log.levels.WARN)
+  end
   local name = ok and type(d) == "table" and d.colorscheme or "noirblaze"
-  if not pcall(vim.cmd.colorscheme, name) then vim.cmd.colorscheme("noirblaze") end
+  if not pcall(vim.cmd.colorscheme, name) then
+    vim.notify("noct-design: no colorscheme " .. name .. ", using noirblaze", vim.log.levels.WARN)
+    vim.cmd.colorscheme("noirblaze")
+  end
   return ""
 end
 NoctDesign()
